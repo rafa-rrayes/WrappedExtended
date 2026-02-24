@@ -1,0 +1,105 @@
+import type { TokenPair, Upload, UploadStatus, UserProfile } from "@/types/api";
+import type { DashboardDetail, DashboardSummary } from "@/types/dashboard";
+import { API_BASE_URL } from "./constants";
+
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const headers: HeadersInit = {
+    ...options.headers,
+  };
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401 && token) {
+    // Try refreshing
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${refreshed}`;
+      return fetch(url, { ...options, headers });
+    }
+  }
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res;
+}
+
+async function refreshToken(): Promise<string | null> {
+  const refresh = localStorage.getItem("refresh_token");
+  if (!refresh) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) return null;
+    const data: TokenPair = await res.json();
+    localStorage.setItem("access_token", data.access);
+    localStorage.setItem("refresh_token", data.refresh);
+    return data.access;
+  } catch {
+    return null;
+  }
+}
+
+export const apiClient = {
+  async register(username: string, email: string, password: string) {
+    const res = await fetch(`${API_BASE_URL}/auth/register/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password }),
+    });
+    if (!res.ok) throw new Error("Registration failed");
+    return res.json();
+  },
+
+  async login(username: string, password: string): Promise<TokenPair> {
+    const res = await fetch(`${API_BASE_URL}/auth/login/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error("Login failed");
+    return res.json();
+  },
+
+  async getMe(): Promise<UserProfile> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/auth/me/`);
+    return res.json();
+  },
+
+  async uploadFile(file: File): Promise<Upload> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetchWithAuth(`${API_BASE_URL}/uploads/`, {
+      method: "POST",
+      body: formData,
+    });
+    return res.json();
+  },
+
+  async getUploadStatus(id: string): Promise<UploadStatus> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/uploads/${id}/status/`);
+    return res.json();
+  },
+
+  async getDashboards(): Promise<DashboardSummary[]> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/`);
+    const data = await res.json();
+    return data.results ?? data;
+  },
+
+  async getDashboard(id: string): Promise<DashboardDetail> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${id}/`);
+    return res.json();
+  },
+
+  async getPublicDashboard(slug: string): Promise<DashboardDetail> {
+    const res = await fetch(`${API_BASE_URL}/dashboards/shared/${slug}/`);
+    if (!res.ok) throw new Error("Dashboard not found");
+    return res.json();
+  },
+};
+
+/** SWR-compatible fetcher */
+export const fetcher = (url: string) => fetchWithAuth(url).then((r) => r.json());

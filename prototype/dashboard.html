@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotify Streaming Dashboard — 2016–2025</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-deep:#050505;--bg-primary:#0c0c0c;--bg-card:#141414;--bg-card-hover:#1a1a1a;
+  --bg-elevated:#1e1e1e;--green:#1DB954;--green-dim:rgba(29,185,84,.15);
+  --green-glow:rgba(29,185,84,.3);--gold:#F5A623;--gold-dim:rgba(245,166,35,.12);
+  --text-primary:#ececec;--text-secondary:#999;--text-muted:#555;
+  --border:rgba(255,255,255,.06);--font-display:'Syne',sans-serif;
+  --font-body:'Outfit',sans-serif;--radius:16px;--radius-sm:10px;
+}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--green) var(--bg-deep)}
+body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text-primary);
+  line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  opacity:.03;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg-deep)}
+::-webkit-scrollbar-thumb{background:var(--green);border-radius:3px}
+
+/* Side Nav */
+.side-nav{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1000;
+  display:flex;flex-direction:column;gap:6px;padding:16px 10px;
+  background:rgba(12,12,12,.85);backdrop-filter:blur(16px);border-right:1px solid var(--border);
+  border-radius:0 var(--radius) var(--radius) 0}
+.side-nav a{display:flex;align-items:center;gap:10px;text-decoration:none;
+  padding:6px 8px;border-radius:var(--radius-sm);transition:all .3s ease;position:relative}
+.side-nav a .dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);
+  transition:all .3s ease;flex-shrink:0}
+.side-nav a .label{font-family:var(--font-body);font-size:.7rem;font-weight:500;
+  color:var(--text-muted);white-space:nowrap;opacity:0;max-width:0;overflow:hidden;
+  transition:all .35s cubic-bezier(.4,0,.2,1);letter-spacing:.04em;text-transform:uppercase}
+.side-nav a:hover .label,.side-nav a.active .label{opacity:1;max-width:120px;margin-right:4px}
+.side-nav a.active .dot{background:var(--green);box-shadow:0 0 10px var(--green-glow)}
+.side-nav a:hover .dot{background:var(--text-secondary)}
+
+/* Container */
+.container{max-width:1280px;margin:0 auto;padding:0 24px 80px}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;position:relative;padding:60px 24px;
+  overflow:hidden}
+.hero::before{content:'';position:absolute;top:-20%;left:50%;transform:translateX(-50%);
+  width:800px;height:800px;border-radius:50%;
+  background:radial-gradient(circle,rgba(29,185,84,.08) 0%,transparent 70%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-10%;right:-10%;width:600px;height:600px;
+  border-radius:50%;background:radial-gradient(circle,rgba(245,166,35,.04) 0%,transparent 70%);
+  pointer-events:none}
+.hero-badge{font-family:var(--font-display);font-size:.75rem;font-weight:600;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--green);
+  border:1px solid rgba(29,185,84,.3);padding:8px 20px;border-radius:50px;
+  margin-bottom:40px;display:inline-block;opacity:0;animation:fadeUp .8s ease forwards .2s}
+.hero-title{font-family:var(--font-display);font-size:clamp(2.5rem,6vw,5rem);font-weight:800;
+  line-height:1.05;margin-bottom:12px;opacity:0;animation:fadeUp .8s ease forwards .4s;
+  background:linear-gradient(135deg,var(--text-primary) 0%,var(--text-secondary) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-subtitle{font-size:1.15rem;color:var(--text-secondary);margin-bottom:60px;
+  font-weight:300;opacity:0;animation:fadeUp .8s ease forwards .6s}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:32px;width:100%;
+  max-width:960px;opacity:0;animation:fadeUp .8s ease forwards .8s}
+.stat-item{text-align:center}
+.stat-number{font-family:var(--font-display);font-size:clamp(2.2rem,4.5vw,3.8rem);
+  font-weight:800;color:var(--green);line-height:1;margin-bottom:4px;
+  text-shadow:0 0 40px rgba(29,185,84,.2)}
+.stat-label{font-size:.8rem;color:var(--text-muted);font-weight:500;
+  letter-spacing:.08em;text-transform:uppercase}
+.stat-sublabel{font-size:.7rem;color:var(--text-muted);margin-top:2px;font-weight:300}
+.hero-scroll-hint{position:absolute;bottom:32px;opacity:0;animation:fadeUp .8s ease forwards 1.4s}
+.hero-scroll-hint span{display:block;width:2px;height:32px;background:linear-gradient(to bottom,var(--green),transparent);margin:0 auto;animation:pulse 2s ease infinite}
+
+/* Sections */
+section{padding:100px 0;position:relative}
+.section-header{margin-bottom:48px}
+.section-tag{font-family:var(--font-display);font-size:.7rem;font-weight:600;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--green);margin-bottom:10px;
+  display:block}
+.section-title{font-family:var(--font-display);font-size:clamp(1.8rem,3.5vw,2.8rem);
+  font-weight:800;line-height:1.15}
+.section-title .accent{color:var(--gold)}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:32px;transition:all .4s ease}
+.card:hover{background:var(--bg-card-hover);border-color:rgba(255,255,255,.1)}
+.card-glass{background:rgba(20,20,20,.6);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.08)}
+
+/* Reveal animation */
+.reveal{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.4,0,.2,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}.reveal-delay-4{transition-delay:.4s}
+.reveal-delay-5{transition-delay:.5s}
+
+/* Section: Top Artists */
+.artists-grid{display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start}
+.fun-fact{position:relative;overflow:hidden}
+.fun-fact::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;
+  background:linear-gradient(to bottom,var(--green),var(--gold));border-radius:2px}
+.fun-fact .big-number{font-family:var(--font-display);font-size:3.5rem;font-weight:800;
+  color:var(--green);line-height:1}
+.fun-fact .fact-text{font-size:.95rem;color:var(--text-secondary);margin-top:12px;line-height:1.7}
+.fun-fact .fact-text strong{color:var(--text-primary);font-weight:600}
+
+/* Section: Top Tracks */
+.tracks-table{width:100%;border-collapse:separate;border-spacing:0 4px}
+.tracks-table tr{transition:all .3s ease}
+.tracks-table tr:hover{background:rgba(29,185,84,.05)}
+.tracks-table td{padding:14px 16px;font-size:.9rem}
+.track-rank{font-family:var(--font-display);font-size:1.4rem;font-weight:800;
+  color:var(--text-muted);width:48px;text-align:center}
+.track-rank.gold{color:var(--gold);font-size:1.6rem;
+  text-shadow:0 0 20px rgba(245,166,35,.3)}
+.track-name{font-weight:600;color:var(--text-primary)}
+.track-artist{color:var(--text-secondary);font-size:.8rem;margin-top:2px}
+.track-plays{font-family:var(--font-display);font-weight:700;color:var(--green);
+  text-align:right;white-space:nowrap}
+.track-hours{color:var(--text-muted);text-align:right;font-size:.85rem;white-space:nowrap}
+.tracks-table tr:nth-child(odd){background:rgba(255,255,255,.015)}
+.tracks-table tr:first-child{background:linear-gradient(90deg,rgba(245,166,35,.08),rgba(245,166,35,.02));
+  border-radius:var(--radius-sm)}
+.tracks-table tr:first-child td:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+.tracks-table tr:first-child td:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+
+/* Section: Listening Over Time */
+.chart-container{position:relative;width:100%;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.chart-container canvas{width:100%!important}
+.dual-chart-grid{display:grid;grid-template-columns:1fr;gap:32px;margin-top:32px}
+
+/* Section: When You Listen */
+.when-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+
+/* Section: Habits */
+.habits-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.habit-card{padding:28px;position:relative;overflow:hidden}
+.habit-card .habit-icon{font-size:2rem;margin-bottom:12px;display:block;opacity:.9}
+.habit-card .habit-title{font-family:var(--font-display);font-size:1.1rem;font-weight:700;
+  margin-bottom:8px}
+.habit-card .habit-stat{font-family:var(--font-display);font-size:2rem;font-weight:800;
+  color:var(--green);line-height:1}
+.habit-card .habit-desc{font-size:.8rem;color:var(--text-secondary);margin-top:8px;
+  line-height:1.5}
+.habit-card .mini-chart{margin-top:16px;height:100px;position:relative}
+.habit-card .mini-chart canvas{width:100%!important;height:100%!important}
+
+/* Section: Albums */
+.albums-scroll{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;
+  padding:8px 0 20px;-webkit-overflow-scrolling:touch}
+.albums-scroll::-webkit-scrollbar{height:4px}
+.albums-scroll::-webkit-scrollbar-thumb{background:var(--green);border-radius:2px}
+.album-card{flex:0 0 280px;scroll-snap-align:start;padding:24px;position:relative;
+  border-left:4px solid;transition:all .4s ease}
+.album-card:nth-child(1){border-color:var(--gold)}
+.album-card:nth-child(2){border-color:var(--green)}
+.album-card:nth-child(3){border-color:#E85D75}
+.album-card:nth-child(4){border-color:#7B68EE}
+.album-card:nth-child(5){border-color:#4ECDC4}
+.album-card:nth-child(6){border-color:#FF6B35}
+.album-card:nth-child(7){border-color:#95E06C}
+.album-card:nth-child(8){border-color:#D4A5FF}
+.album-card:nth-child(9){border-color:#FF8FA3}
+.album-card:nth-child(10){border-color:#64DFDF}
+.album-card:hover{transform:translateY(-4px);border-color:var(--green)}
+.album-rank{font-family:var(--font-display);font-size:2.5rem;font-weight:800;
+  color:rgba(255,255,255,.06);position:absolute;top:12px;right:16px;line-height:1}
+.album-name{font-family:var(--font-display);font-weight:700;font-size:1rem;
+  line-height:1.3;margin-bottom:4px}
+.album-artist{font-size:.8rem;color:var(--text-secondary);margin-bottom:16px}
+.album-stats{display:flex;gap:16px}
+.album-stat-val{font-family:var(--font-display);font-weight:700;color:var(--green);
+  font-size:.9rem}
+.album-stat-label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.04em}
+
+/* Section: Start/End */
+.donut-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.donut-card{text-align:center}
+.donut-card h3{font-family:var(--font-display);font-weight:700;margin-bottom:20px;
+  font-size:1.1rem}
+.donut-card canvas{max-height:280px}
+
+/* Footer */
+.footer{text-align:center;padding:60px 24px 40px;position:relative}
+.footer::before{content:'';display:block;width:80px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  margin:0 auto 24px}
+.footer p{font-size:.8rem;color:var(--text-muted);font-weight:400}
+
+/* Platform bars */
+.platform-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.platform-bar .label{width:70px;font-size:.75rem;color:var(--text-secondary);text-align:right;flex-shrink:0}
+.platform-bar .bar-track{flex:1;height:20px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden}
+.platform-bar .bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+.platform-bar .pct{font-size:.7rem;color:var(--text-muted);width:40px;flex-shrink:0}
+
+/* Country bars */
+.country-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.country-bar .flag{width:24px;font-size:.75rem;text-align:center}
+.country-bar .bar-track{flex:1;height:14px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden}
+.country-bar .bar-fill{height:100%;border-radius:3px;background:var(--green);transition:width 1s ease}
+.country-bar .pct{font-size:.7rem;color:var(--text-muted);width:40px;flex-shrink:0}
+
+/* Keyframes */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* Responsive */
+@media(max-width:1024px){
+  .artists-grid{grid-template-columns:1fr}
+  .when-grid{grid-template-columns:1fr}
+  .habits-grid{grid-template-columns:repeat(2,1fr)}
+  .donut-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(3,1fr);gap:24px}
+  .stats-grid .stat-item:nth-child(4),.stats-grid .stat-item:nth-child(5){grid-column:span 1}
+}
+@media(max-width:768px){
+  .side-nav{display:none}
+  .container{padding:0 16px 60px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:20px}
+  .habits-grid{grid-template-columns:1fr}
+  section{padding:60px 0}
+  .album-card{flex:0 0 240px}
+  .tracks-table td{padding:10px 8px;font-size:.8rem}
+  .track-rank{font-size:1.1rem;width:32px}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Side Navigation -->
+<nav class="side-nav" id="sideNav">
+  <a href="#hero" class="active"><span class="dot"></span><span class="label">Overview</span></a>
+  <a href="#artists"><span class="dot"></span><span class="label">Artists</span></a>
+  <a href="#tracks"><span class="dot"></span><span class="label">Tracks</span></a>
+  <a href="#timeline"><span class="dot"></span><span class="label">Timeline</span></a>
+  <a href="#when"><span class="dot"></span><span class="label">Schedule</span></a>
+  <a href="#habits"><span class="dot"></span><span class="label">Habits</span></a>
+  <a href="#albums"><span class="dot"></span><span class="label">Albums</span></a>
+  <a href="#flow"><span class="dot"></span><span class="label">Flow</span></a>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero" id="hero">
+  <span class="hero-badge">Spotify Extended Streaming History</span>
+  <h1 class="hero-title">Your Sonic Universe</h1>
+  <p class="hero-subtitle">9 years of music, decoded and visualized</p>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number" data-target="1972" data-suffix="">0</div>
+      <div class="stat-label">hours</div>
+      <div class="stat-sublabel">82 days of music</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" data-target="87384" data-suffix="">0</div>
+      <div class="stat-label">streams</div>
+      <div class="stat-sublabel">since May 2016</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" data-target="2941" data-suffix="">0</div>
+      <div class="stat-label">artists</div>
+      <div class="stat-sublabel">explored</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" data-target="8314" data-suffix="">0</div>
+      <div class="stat-label">tracks</div>
+      <div class="stat-sublabel">played</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" data-target="9" data-suffix="">0</div>
+      <div class="stat-label">years</div>
+      <div class="stat-sublabel">2016 — 2025</div>
+    </div>
+  </div>
+  <div class="hero-scroll-hint"><span></span></div>
+</section>
+
+<div class="container">
+
+<!-- Section 1: Top Artists -->
+<section id="artists">
+  <div class="section-header reveal">
+    <span class="section-tag">01 — Top Artists</span>
+    <h2 class="section-title">The Artists That <span class="accent">Defined</span> Your Sound</h2>
+  </div>
+  <div class="artists-grid">
+    <div class="chart-container reveal reveal-delay-1">
+      <canvas id="artistsChart"></canvas>
+    </div>
+    <div class="card card-glass fun-fact reveal reveal-delay-2" style="padding-left:36px">
+      <div class="big-number">260.7h</div>
+      <div class="fact-text" style="margin-top:16px">
+        You listened to <strong>The Beatles</strong> for <strong>260.7 hours</strong> —
+        that's <strong>10.9 full days</strong> of non-stop Fab Four.<br><br>
+        They account for <strong>16.2%</strong> of all your plays —
+        nearly <strong>4x</strong> the runner-up Queen.<br><br>
+        <span style="color:var(--text-muted)">Your top 3 artists alone represent
+        over 410 hours of listening time.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 2: Most Played Tracks -->
+<section id="tracks">
+  <div class="section-header reveal">
+    <span class="section-tag">02 — Most Played Tracks</span>
+    <h2 class="section-title">Your All-Time <span class="accent">Greatest Hits</span></h2>
+  </div>
+  <div class="card reveal reveal-delay-1" style="padding:16px;overflow-x:auto">
+    <table class="tracks-table" id="tracksTable"></table>
+  </div>
+</section>
+
+<!-- Section 3: Listening Over Time -->
+<section id="timeline">
+  <div class="section-header reveal">
+    <span class="section-tag">03 — Timeline</span>
+    <h2 class="section-title">Your Listening <span class="accent">Journey</span></h2>
+  </div>
+  <div class="chart-container reveal reveal-delay-1" style="height:360px">
+    <canvas id="monthlyChart"></canvas>
+  </div>
+  <div class="dual-chart-grid">
+    <div class="chart-container reveal reveal-delay-2" style="height:300px">
+      <canvas id="yearlyChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: When You Listen -->
+<section id="when">
+  <div class="section-header reveal">
+    <span class="section-tag">04 — Listening Clock</span>
+    <h2 class="section-title">When the Music <span class="accent">Plays</span></h2>
+  </div>
+  <div class="when-grid">
+    <div class="chart-container reveal reveal-delay-1" style="height:320px">
+      <canvas id="hourlyChart"></canvas>
+    </div>
+    <div class="chart-container reveal reveal-delay-2" style="height:320px">
+      <canvas id="weekdayChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Section 5: Listening Habits -->
+<section id="habits">
+  <div class="section-header reveal">
+    <span class="section-tag">05 — Insights</span>
+    <h2 class="section-title">Your Listening <span class="accent">Habitz</span></h2>
+  </div>
+  <div class="habits-grid">
+    <!-- Night Owl -->
+    <div class="card card-glass habit-card reveal reveal-delay-1">
+      <span class="habit-icon" style="font-size:1.6rem;letter-spacing:2px">&#9789;</span>
+      <div class="habit-title">Night Owl</div>
+      <div class="habit-stat">1 AM</div>
+      <div class="habit-desc">Peak listening hour. You had <strong>7,445 streams</strong>
+        between midnight and 2 AM. The quietest hour? 11 AM with just 858 streams.</div>
+    </div>
+    <!-- Skip Rate -->
+    <div class="card card-glass habit-card reveal reveal-delay-2">
+      <span class="habit-icon">&#9197;</span>
+      <div class="habit-title">Skip Rate</div>
+      <div class="habit-stat">24.2%</div>
+      <div class="habit-desc">Explicit skips. But <strong>54.8%</strong> of streams had under
+        30 seconds of play time — you know what you want fast.</div>
+      <div class="mini-chart"><canvas id="skipChart"></canvas></div>
+    </div>
+    <!-- Shuffle -->
+    <div class="card card-glass habit-card reveal reveal-delay-3">
+      <span class="habit-icon">&#9884;</span>
+      <div class="habit-title">Shuffle Mode</div>
+      <div class="habit-stat">49.8%</div>
+      <div class="habit-desc">Almost a perfect 50/50 split — <strong>49.8% shuffle ON</strong>
+        vs 50.2% off. You're equally a curator and explorer.</div>
+      <div class="mini-chart"><canvas id="shuffleChart"></canvas></div>
+    </div>
+    <!-- Platforms -->
+    <div class="card card-glass habit-card reveal reveal-delay-1">
+      <span class="habit-icon">&#9900;</span>
+      <div class="habit-title">Platforms</div>
+      <div class="habit-stat" style="font-size:1.5rem">86.1% iPhone</div>
+      <div class="habit-desc" style="margin-bottom:12px">Your pocket is your concert hall.</div>
+      <div id="platformBars"></div>
+    </div>
+    <!-- Globe Trotter -->
+    <div class="card card-glass habit-card reveal reveal-delay-2">
+      <span class="habit-icon">&#9679;</span>
+      <div class="habit-title">Globe Trotter</div>
+      <div class="habit-stat" style="font-size:1.5rem">18 countries</div>
+      <div class="habit-desc" style="margin-bottom:12px">Music follows you everywhere.</div>
+      <div id="countryBars"></div>
+    </div>
+    <!-- Offline -->
+    <div class="card card-glass habit-card reveal reveal-delay-3">
+      <span class="habit-icon">&#8615;</span>
+      <div class="habit-title">Offline & Incognito</div>
+      <div class="habit-stat">7.5%</div>
+      <div class="habit-desc">
+        <strong>6,520 streams</strong> played offline — for the subway, flights, and dead zones.<br><br>
+        <span style="color:var(--gold)">1.3%</span> in incognito mode —
+        <span style="color:var(--text-muted)">1,151 guilty pleasures.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 6: Top Albums -->
+<section id="albums">
+  <div class="section-header reveal">
+    <span class="section-tag">06 — Top Albums</span>
+    <h2 class="section-title">Albums on <span class="accent">Repeat</span></h2>
+  </div>
+  <div class="albums-scroll reveal reveal-delay-1" id="albumsScroll"></div>
+</section>
+
+<!-- Section 7: Track Flow -->
+<section id="flow">
+  <div class="section-header reveal">
+    <span class="section-tag">07 — Track Flow</span>
+    <h2 class="section-title">How Tracks <span class="accent">Start & End</span></h2>
+  </div>
+  <div class="donut-grid">
+    <div class="card donut-card reveal reveal-delay-1">
+      <h3>How Tracks Start</h3>
+      <canvas id="startChart"></canvas>
+    </div>
+    <div class="card donut-card reveal reveal-delay-2">
+      <h3>How Tracks End</h3>
+      <canvas id="endChart"></canvas>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>Generated from 9 years of Spotify Extended Streaming History &middot; May 2016 — May 2025 &middot; 87,384 streams analyzed</p>
+</footer>
+
+<script>
+// ===================== DATA =====================
+const ARTISTS_HOURS = [
+  {a:'The Beatles',h:260.7},{a:'Queen',h:78.66},{a:'Pink Floyd',h:70.55},
+  {a:'Kanye West',h:49.79},{a:'Eminem',h:45.54},{a:'Elton John',h:39.04},
+  {a:'John Williams',h:32.79},{a:'Guns N\' Roses',h:25.44},{a:'Michael Jackson',h:25.27},
+  {a:'Beethoven',h:23.48},{a:'David Bowie',h:21.82},{a:'Bon Jovi',h:20.06},
+  {a:'Bob Dylan',h:19.89},{a:'Travis Scott',h:19.65},{a:'Bruno Mars',h:17.95}
+];
+
+const TRACKS = [
+  {n:'Strawberry Fields Forever',a:'The Beatles',p:398,h:13.45},
+  {n:'Don\'t Stop Me Now',a:'Queen',p:392,h:8.8},
+  {n:'Mr. Blue Sky',a:'Electric Light Orchestra',p:390,h:12.65},
+  {n:'Take on Me',a:'a-ha',p:383,h:11.21},
+  {n:'Rocket Man',a:'Elton John',p:366,h:12.53},
+  {n:'Life on Mars?',a:'David Bowie',p:351,h:11.33},
+  {n:'Africa',a:'TOTO',p:339,h:11.38},
+  {n:'Hotel California',a:'Eagles',p:334,h:14.65},
+  {n:'Let It Be',a:'The Beatles',p:333,h:9.1},
+  {n:'Imagine',a:'John Lennon',p:329,h:8.4},
+  {n:'Knockin\' On Heaven\'s Door',a:'Guns N\' Roses',p:329,h:12.08},
+  {n:'Hey Jude',a:'The Beatles',p:311,h:9.42},
+  {n:'Bohemian Rhapsody',a:'Queen',p:311,h:8.91},
+  {n:'American Pie',a:'Don McLean',p:310,h:14.17},
+  {n:'Yesterday',a:'The Beatles',p:305,h:6.5},
+  {n:'Livin\' On A Prayer',a:'Bon Jovi',p:304,h:9.18},
+  {n:'Never Gonna Give You Up',a:'Rick Astley',p:301,h:7.2},
+  {n:'Like a Rolling Stone',a:'Bob Dylan',p:298,h:12.49},
+  {n:'Under Pressure',a:'Queen',p:294,h:7.5},
+  {n:'Piano Man',a:'Billy Joel',p:293,h:11.39}
+];
+
+const MONTHLY = [
+  {m:'2016-05',h:2.7},{m:'2016-06',h:0.82},{m:'2016-07',h:4.26},{m:'2016-08',h:0.25},
+  {m:'2016-09',h:0.24},{m:'2018-03',h:6.83},{m:'2018-04',h:3.95},{m:'2018-05',h:0.36},
+  {m:'2018-06',h:1.36},{m:'2018-07',h:1.36},{m:'2018-08',h:1.57},{m:'2018-09',h:2.05},
+  {m:'2018-10',h:5.66},{m:'2018-11',h:8.88},{m:'2018-12',h:22.88},
+  {m:'2019-01',h:15.23},{m:'2019-02',h:5.18},{m:'2019-03',h:12.41},{m:'2019-04',h:41.52},
+  {m:'2019-05',h:51.79},{m:'2019-06',h:13.92},{m:'2019-07',h:38.18},{m:'2019-08',h:42.51},
+  {m:'2019-09',h:40.82},{m:'2019-10',h:39.78},{m:'2019-11',h:35.37},{m:'2019-12',h:40.3},
+  {m:'2020-01',h:33.23},{m:'2020-02',h:21.35},{m:'2020-03',h:37.43},{m:'2020-04',h:47.96},
+  {m:'2020-05',h:50.45},{m:'2020-06',h:68.08},{m:'2020-07',h:51.12},{m:'2020-08',h:39.84},
+  {m:'2020-09',h:20.69},{m:'2020-10',h:7.71},{m:'2020-11',h:7.4},{m:'2020-12',h:22.12},
+  {m:'2021-01',h:9.29},{m:'2021-02',h:12.43},{m:'2021-03',h:5.21},{m:'2021-04',h:9.65},
+  {m:'2021-05',h:33.33},{m:'2021-06',h:11.73},{m:'2021-07',h:12.32},{m:'2021-08',h:7.79},
+  {m:'2021-09',h:19.03},{m:'2021-10',h:26.22},{m:'2021-11',h:12.75},{m:'2021-12',h:8.43},
+  {m:'2022-01',h:4.72},{m:'2022-02',h:4.25},{m:'2022-03',h:5.25},{m:'2022-04',h:10.77},
+  {m:'2022-05',h:18.12},{m:'2022-06',h:17.53},{m:'2022-07',h:13.06},{m:'2022-08',h:12.52},
+  {m:'2022-09',h:14.61},{m:'2022-10',h:18.63},{m:'2022-11',h:17.59},{m:'2022-12',h:16.15},
+  {m:'2023-01',h:21.71},{m:'2023-02',h:23.3},{m:'2023-03',h:11.64},{m:'2023-04',h:11.62},
+  {m:'2023-05',h:3.49},{m:'2023-06',h:12.51},{m:'2023-07',h:34.05},{m:'2023-08',h:19.77},
+  {m:'2023-09',h:20.85},{m:'2023-10',h:9.3},{m:'2023-11',h:19.29},{m:'2023-12',h:25.1},
+  {m:'2024-01',h:38.31},{m:'2024-02',h:19.7},{m:'2024-03',h:25.23},{m:'2024-04',h:25.46},
+  {m:'2024-05',h:57.89},{m:'2024-06',h:62.34},{m:'2024-07',h:22.44},{m:'2024-08',h:28.13},
+  {m:'2024-09',h:34.55},{m:'2024-10',h:32.37},{m:'2024-11',h:29.07},{m:'2024-12',h:33.76},
+  {m:'2025-01',h:43.96},{m:'2025-02',h:24.58},{m:'2025-03',h:25.32},{m:'2025-04',h:49.45},
+  {m:'2025-05',h:38.11}
+];
+
+const YEARLY = [
+  {y:'2016',h:8.27,a:42},{y:'2018',h:54.9,a:286},{y:'2019',h:377,a:659},
+  {y:'2020',h:407.37,a:535},{y:'2021',h:168.17,a:712},{y:'2022',h:153.22,a:711},
+  {y:'2023',h:212.62,a:905},{y:'2024',h:409.24,a:1084},{y:'2025',h:181.42,a:584}
+];
+
+const HOURLY = [
+  {h:0,c:7131},{h:1,c:7445},{h:2,c:6392},{h:3,c:4916},{h:4,c:4398},
+  {h:5,c:3119},{h:6,c:2232},{h:7,c:1152},{h:8,c:1457},{h:9,c:1842},
+  {h:10,c:1535},{h:11,c:858},{h:12,c:1187},{h:13,c:1645},{h:14,c:2143},
+  {h:15,c:2202},{h:16,c:3029},{h:17,c:3056},{h:18,c:3713},{h:19,c:3788},
+  {h:20,c:5443},{h:21,c:6117},{h:22,c:6528},{h:23,c:6056}
+];
+
+const WEEKDAY = [
+  {d:'Mon',c:9559,h:221.6},{d:'Tue',c:10689,h:239.65},{d:'Wed',c:10797,h:264.48},
+  {d:'Thu',c:12169,h:230.83},{d:'Fri',c:13289,h:302.8},
+  {d:'Sat',c:16707,h:376.74},{d:'Sun',c:14174,h:336.1}
+];
+
+const ALBUMS = [
+  {n:'1',a:'The Beatles',p:3786,h:65.4},
+  {n:'The Beatles (White Album)',a:'The Beatles',p:1749,h:34.53},
+  {n:'Sgt. Pepper\'s Lonely Hearts Club Band',a:'The Beatles',p:1271,h:30.24},
+  {n:'Abbey Road',a:'The Beatles',p:1174,h:20.88},
+  {n:'Magical Mystery Tour',a:'The Beatles',p:1011,h:26.08},
+  {n:'The Dark Side of the Moon',a:'Pink Floyd',p:969,h:36.58},
+  {n:'Minecraft — Volume Alpha',a:'C418',p:964,h:12.63},
+  {n:'Bohemian Rhapsody',a:'Queen',p:955,h:25.08},
+  {n:'Help!',a:'The Beatles',p:854,h:12.26},
+  {n:'Revolver',a:'The Beatles',p:844,h:13.75}
+];
+
+const PLATFORMS = [
+  {n:'iPhone',p:86.1,c:'var(--green)'},{n:'macOS',p:9.7,c:'var(--gold)'},
+  {n:'Windows',p:3.3,c:'#7B68EE'},{n:'Xbox',p:0.7,c:'#E85D75'}
+];
+
+const COUNTRIES = [
+  {n:'BR',f:'🇧🇷',p:90.88},{n:'US',f:'🇺🇸',p:3.73},{n:'NZ',f:'🇳🇿',p:2.63},
+  {n:'AU',f:'🇦🇺',p:0.68},{n:'ZA',f:'🇿🇦',p:0.54},{n:'CL',f:'🇨🇱',p:0.35},
+  {n:'SE',f:'🇸🇪',p:0.33}
+];
+
+// ===================== CHART DEFAULTS =====================
+Chart.defaults.color = '#777';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 8;
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(10,10,10,.92)';
+Chart.defaults.plugins.tooltip.borderColor = 'rgba(29,185,84,.3)';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+Chart.defaults.plugins.tooltip.titleFont = {family:"'Syne',sans-serif",weight:'700'};
+Chart.defaults.plugins.tooltip.padding = 12;
+
+// ===================== COUNTER ANIMATION =====================
+function animateCounters() {
+  document.querySelectorAll('.stat-number[data-target]').forEach(el => {
+    const target = +el.dataset.target;
+    const duration = 2000;
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4);
+      el.textContent = Math.floor(target * eased).toLocaleString();
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target.toLocaleString();
+    }
+    requestAnimationFrame(update);
+  });
+}
+
+// ===================== SCROLL REVEAL =====================
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.1, rootMargin: '0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ===================== NAV HIGHLIGHTING =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.side-nav a');
+const navObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.side-nav a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {threshold: 0.2, rootMargin: '-10% 0px -60% 0px'});
+sections.forEach(s => navObserver.observe(s));
+
+// ===================== TRACKS TABLE =====================
+function buildTracksTable() {
+  const table = document.getElementById('tracksTable');
+  TRACKS.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="track-rank ${i === 0 ? 'gold' : ''}">${i + 1}</td>
+      <td><div class="track-name">${t.n}</div><div class="track-artist">${t.a}</div></td>
+      <td class="track-plays">${t.p.toLocaleString()} plays</td>
+      <td class="track-hours">${t.h}h</td>`;
+    table.appendChild(tr);
+  });
+}
+
+// ===================== ALBUMS =====================
+function buildAlbums() {
+  const container = document.getElementById('albumsScroll');
+  ALBUMS.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'card card-glass album-card';
+    card.innerHTML = `
+      <div class="album-rank">${String(i+1).padStart(2,'0')}</div>
+      <div class="album-name">${a.n}</div>
+      <div class="album-artist">${a.a}</div>
+      <div class="album-stats">
+        <div><div class="album-stat-val">${a.p.toLocaleString()}</div><div class="album-stat-label">plays</div></div>
+        <div><div class="album-stat-val">${a.h}h</div><div class="album-stat-label">listened</div></div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+// ===================== PLATFORM BARS =====================
+function buildPlatformBars() {
+  const container = document.getElementById('platformBars');
+  PLATFORMS.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'platform-bar';
+    div.innerHTML = `<span class="label">${p.n}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${p.p}%;background:${p.c}"></div></div>
+      <span class="pct">${p.p}%</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ===================== COUNTRY BARS =====================
+function buildCountryBars() {
+  const container = document.getElementById('countryBars');
+  const max = COUNTRIES[0].p;
+  COUNTRIES.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'country-bar';
+    const w = Math.max((c.p / max) * 100, 2);
+    div.innerHTML = `<span class="flag">${c.f}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div>
+      <span class="pct">${c.p}%</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ===================== CHARTS =====================
+function initCharts() {
+  // --- Top Artists ---
+  const artistCtx = document.getElementById('artistsChart').getContext('2d');
+  const artistGrad = artistCtx.createLinearGradient(0, 0, artistCtx.canvas.parentElement.offsetWidth, 0);
+  artistGrad.addColorStop(0, '#1DB954');
+  artistGrad.addColorStop(1, '#F5A623');
+  new Chart(artistCtx, {
+    type: 'bar',
+    data: {
+      labels: ARTISTS_HOURS.map(a => a.a),
+      datasets: [{
+        data: ARTISTS_HOURS.map(a => a.h),
+        backgroundColor: ARTISTS_HOURS.map((_, i) => {
+          const ratio = i / (ARTISTS_HOURS.length - 1);
+          const r = Math.round(29 + (245-29)*ratio);
+          const g = Math.round(185 + (166-185)*ratio);
+          const b = Math.round(84 + (35-84)*ratio);
+          return `rgba(${r},${g},${b},0.85)`;
+        }),
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          callbacks: {label: ctx => `${ctx.parsed.x} hours`}
+        }
+      },
+      scales: {
+        x: {grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>v+'h'}},
+        y: {grid:{display:false},ticks:{font:{family:"'Syne',sans-serif",weight:'600',size:11},color:'#bbb'}}
+      }
+    }
+  });
+
+  // --- Monthly Timeline ---
+  const monthCtx = document.getElementById('monthlyChart').getContext('2d');
+  const monthGrad = monthCtx.createLinearGradient(0, 0, 0, 340);
+  monthGrad.addColorStop(0, 'rgba(29,185,84,0.35)');
+  monthGrad.addColorStop(1, 'rgba(29,185,84,0.01)');
+  new Chart(monthCtx, {
+    type: 'line',
+    data: {
+      labels: MONTHLY.map(m => m.m),
+      datasets: [{
+        data: MONTHLY.map(m => m.h),
+        fill: true,
+        backgroundColor: monthGrad,
+        borderColor: '#1DB954',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#1DB954',
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks:{title:ctx=>ctx[0].label,label:ctx=>`${ctx.parsed.y} hours`}}
+      },
+      scales: {
+        x: {
+          grid:{display:false},
+          ticks:{
+            maxTicksLimit:12,
+            callback:function(val,i){const l=this.getLabelForValue(val);return l.endsWith('-01')?l.substring(0,4):''},
+            font:{family:"'Syne',sans-serif",weight:'600'},color:'#888'
+          }
+        },
+        y: {grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>v+'h'}}
+      },
+      interaction:{mode:'index',intersect:false}
+    }
+  });
+
+  // --- Yearly ---
+  new Chart(document.getElementById('yearlyChart'), {
+    type: 'bar',
+    data: {
+      labels: YEARLY.map(y => y.y),
+      datasets: [
+        {
+          label: 'Hours Listened',
+          data: YEARLY.map(y => y.h),
+          backgroundColor: 'rgba(29,185,84,0.7)',
+          borderRadius: 6,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2
+        },
+        {
+          label: 'Unique Artists',
+          data: YEARLY.map(y => y.a),
+          type: 'line',
+          borderColor: '#F5A623',
+          backgroundColor: 'rgba(245,166,35,0.1)',
+          pointBackgroundColor: '#F5A623',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2.5,
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend:{position:'top',labels:{padding:16,font:{size:11}}}
+      },
+      scales: {
+        x: {grid:{display:false},ticks:{font:{family:"'Syne',sans-serif",weight:'600'}}},
+        y: {position:'left',grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>v+'h'},title:{display:true,text:'Hours',color:'#1DB954',font:{size:11}}},
+        y1:{position:'right',grid:{display:false},ticks:{callback:v=>v},title:{display:true,text:'Artists',color:'#F5A623',font:{size:11}}}
+      }
+    }
+  });
+
+  // --- Hourly ---
+  const maxH = Math.max(...HOURLY.map(h=>h.c));
+  new Chart(document.getElementById('hourlyChart'), {
+    type: 'bar',
+    data: {
+      labels: HOURLY.map(h => String(h.h).padStart(2,'0')+':00'),
+      datasets: [{
+        data: HOURLY.map(h => h.c),
+        backgroundColor: HOURLY.map(h => {
+          const ratio = h.c / maxH;
+          return `rgba(29,185,84,${0.2 + ratio*0.7})`;
+        }),
+        borderRadius: 3,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y.toLocaleString()} streams`}}
+      },
+      scales: {
+        x:{grid:{display:false},ticks:{maxTicksLimit:12,font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>(v/1000)+'k'}}
+      }
+    }
+  });
+
+  // --- Weekday ---
+  new Chart(document.getElementById('weekdayChart'), {
+    type: 'bar',
+    data: {
+      labels: WEEKDAY.map(d => d.d),
+      datasets: [{
+        label: 'Streams',
+        data: WEEKDAY.map(d => d.c),
+        backgroundColor: WEEKDAY.map((_,i) => i>=5 ? 'rgba(245,166,35,0.75)' : 'rgba(29,185,84,0.65)'),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend:{display:false},
+        tooltip:{callbacks:{
+          label:ctx=>{const d=WEEKDAY[ctx.dataIndex];return `${d.c.toLocaleString()} streams · ${d.h}h`}
+        }}
+      },
+      scales: {
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>(v/1000)+'k'}},
+        y:{grid:{display:false},ticks:{font:{family:"'Syne',sans-serif",weight:'600',size:12},color:'#bbb'}}
+      }
+    }
+  });
+
+  // --- Skip Donut ---
+  new Chart(document.getElementById('skipChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Skipped','Played'],
+      datasets: [{
+        data: [24.2, 75.8],
+        backgroundColor: ['#F5A623','rgba(29,185,84,0.6)'],
+        borderWidth: 0,
+        cutout: '72%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend:{display:false},tooltip:{enabled:true}}
+    }
+  });
+
+  // --- Shuffle Donut ---
+  new Chart(document.getElementById('shuffleChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Shuffle ON','Shuffle OFF'],
+      datasets: [{
+        data: [49.8, 50.2],
+        backgroundColor: ['#1DB954','rgba(255,255,255,0.12)'],
+        borderWidth: 0,
+        cutout: '72%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend:{display:false},tooltip:{enabled:true}}
+    }
+  });
+
+  // --- Start Reasons Donut ---
+  new Chart(document.getElementById('startChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Forward Button','Track Done','Click Row','Play Button','Back Button','Other'],
+      datasets: [{
+        data: [34.59, 26.48, 21.12, 7.76, 7.13, 2.92],
+        backgroundColor: ['#1DB954','#F5A623','#7B68EE','#E85D75','#4ECDC4','rgba(255,255,255,0.1)'],
+        borderWidth: 0,
+        cutout: '55%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend:{position:'bottom',labels:{padding:12,font:{size:11},color:'#aaa'}}
+      }
+    }
+  });
+
+  // --- End Reasons Donut ---
+  new Chart(document.getElementById('endChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Forward Button','Track Done','End Play','Back Button','Unexpected Exit','Other'],
+      datasets: [{
+        data: [34.4, 26.52, 25.87, 7.07, 3.45, 2.69],
+        backgroundColor: ['#1DB954','#F5A623','#7B68EE','#E85D75','#4ECDC4','rgba(255,255,255,0.1)'],
+        borderWidth: 0,
+        cutout: '55%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend:{position:'bottom',labels:{padding:12,font:{size:11},color:'#aaa'}}
+      }
+    }
+  });
+}
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+  animateCounters();
+  buildTracksTable();
+  buildAlbums();
+  buildPlatformBars();
+  buildCountryBars();
+  initCharts();
+});
+</script>
+</body>
+</html>
