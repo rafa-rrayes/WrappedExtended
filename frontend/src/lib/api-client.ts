@@ -63,9 +63,34 @@ export const apiClient = {
     return res.json();
   },
 
+  async logout(refresh: string): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/auth/logout/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+  },
+
   async getMe(): Promise<UserProfile> {
     const res = await fetchWithAuth(`${API_BASE_URL}/auth/me/`);
     return res.json();
+  },
+
+  async updateProfile(data: { display_name?: string; timezone?: string }): Promise<UserProfile> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/auth/me/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async changePassword(old_password: string, new_password: string): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/auth/password/change/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ old_password, new_password }),
+    });
   },
 
   async uploadFile(file: File): Promise<Upload> {
@@ -83,6 +108,12 @@ export const apiClient = {
     return res.json();
   },
 
+  async deleteUpload(id: string): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/uploads/${id}/`, {
+      method: "DELETE",
+    });
+  },
+
   async getDashboards(): Promise<DashboardSummary[]> {
     const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/`);
     const data = await res.json();
@@ -92,6 +123,24 @@ export const apiClient = {
   async getDashboard(id: string): Promise<DashboardDetail> {
     const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${id}/`);
     return res.json();
+  },
+
+  async updateDashboard(
+    id: string,
+    data: { is_public?: boolean; share_slug?: string },
+  ): Promise<DashboardSummary> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async deleteDashboard(id: string): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/dashboards/${id}/`, {
+      method: "DELETE",
+    });
   },
 
   async getPublicDashboard(slug: string): Promise<DashboardDetail> {

@@ -1,5 +1,8 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import ProcessedDashboard, Upload, UserProfile
 
@@ -17,6 +20,28 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user)
         return user
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    def validate_refresh(self, value):
+        try:
+            self.token = RefreshToken(value)
+        except Exception:
+            raise serializers.ValidationError("Invalid or expired token.")
+        return value
+
+    def save(self):
+        try:
+            self.token.blacklist()
+        except Exception:
+            pass  # Token may already be blacklisted
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -71,6 +96,11 @@ class DashboardSummarySerializer(serializers.ModelSerializer):
             "unique_artists", "unique_tracks", "date_range_start", "date_range_end",
             "created_at",
         )
+
+    def update(self, instance, validated_data):
+        if validated_data.get("is_public") and not instance.share_slug:
+            validated_data["share_slug"] = uuid.uuid4().hex[:8]
+        return super().update(instance, validated_data)
 
 
 class DashboardDetailSerializer(serializers.ModelSerializer):

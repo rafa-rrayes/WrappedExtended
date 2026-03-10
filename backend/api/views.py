@@ -4,12 +4,14 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from processing.tasks import process_upload
-from storage.client import upload_file_to_s3
+from storage.client import delete_file_from_s3, upload_file_to_s3
 
 from .models import ProcessedDashboard, Upload, UserProfile
 from .serializers import (
+    ChangePasswordSerializer,
     DashboardDetailSerializer,
     DashboardSummarySerializer,
+    LogoutSerializer,
     RegisterSerializer,
     UploadSerializer,
     UploadStatusSerializer,
@@ -39,6 +41,32 @@ class MeView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+
+class LogoutView(generics.GenericAPIView):
+    serializer_class = LogoutSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not request.user.check_password(serializer.validated_data["old_password"]):
+            return Response(
+                {"old_password": ["Wrong password."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save()
+        return Response({"detail": "Password updated."})
 
 
 # ─── Uploads ───────────────────────────────────────────────────────────────────
@@ -95,6 +123,20 @@ class UploadStatusView(generics.RetrieveAPIView):
         return Upload.objects.filter(user=self.request.user)
 
 
+class UploadDeleteView(generics.DestroyAPIView):
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return Upload.objects.filter(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        try:
+            delete_file_from_s3(instance.file_key)
+        except Exception:
+            pass  # S3 cleanup is best-effort
+        instance.delete()
+
+
 # ─── Dashboards ────────────────────────────────────────────────────────────────
 
 
@@ -105,7 +147,7 @@ class DashboardListView(generics.ListAPIView):
         return ProcessedDashboard.objects.filter(user=self.request.user)
 
 
-class DashboardDetailView(generics.RetrieveUpdateAPIView):
+class DashboardDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "id"
 
     def get_serializer_class(self):

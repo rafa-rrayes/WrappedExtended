@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useUploadStatus } from "@/lib/hooks/use-upload-status";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 export default function ProcessingPage() {
   const params = useParams<{ jobId: string }>();
@@ -13,49 +14,51 @@ export default function ProcessingPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-md text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-extrabold mb-4">
-          {data?.status === "failed" ? "Processing Failed" : "Processing Your History"}
-        </h1>
+    <AuthGuard>
+      <main className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-md text-center">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl font-extrabold mb-4">
+            {data?.status === "failed" ? "Processing Failed" : "Processing Your History"}
+          </h1>
 
-        {error && (
-          <p className="text-red-400 mb-4">
-            Failed to check status. Please refresh.
-          </p>
-        )}
-
-        {data?.status === "failed" ? (
-          <div>
-            <p className="text-text-secondary mb-4">
-              {data.error_message || "An unexpected error occurred."}
+          {error && (
+            <p className="text-red-400 mb-4">
+              Failed to check status. Please refresh.
             </p>
-            <button
-              onClick={() => router.push("/upload")}
-              className="bg-green hover:bg-green/90 text-bg-deep font-semibold px-8 py-3 rounded-full transition-all"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : (
-          <div>
-            <p className="text-text-secondary mb-8">
-              Crunching {data?.status === "validating" ? "and validating" : ""} your streaming data...
-            </p>
+          )}
 
-            {/* Progress bar */}
-            <div className="w-full bg-bg-card border border-border rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-green rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${data?.progress_pct ?? 0}%` }}
-              />
+          {data?.status === "failed" ? (
+            <div>
+              <p className="text-text-secondary mb-4">
+                {data.error_message || "An unexpected error occurred."}
+              </p>
+              <button
+                onClick={() => router.push("/upload")}
+                className="bg-green hover:bg-green/90 text-bg-deep font-semibold px-8 py-3 rounded-full transition-all"
+              >
+                Try Again
+              </button>
             </div>
-            <p className="text-text-muted text-sm mt-2">
-              {data?.progress_pct ?? 0}% complete
-            </p>
-          </div>
-        )}
-      </div>
-    </main>
+          ) : (
+            <div>
+              <p className="text-text-secondary mb-8">
+                Crunching {data?.status === "validating" ? "and validating" : ""} your streaming data...
+              </p>
+
+              {/* Progress bar */}
+              <div className="w-full bg-bg-card border border-border rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-full bg-green rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${data?.progress_pct ?? 0}%` }}
+                />
+              </div>
+              <p className="text-text-muted text-sm mt-2">
+                {data?.progress_pct ?? 0}% complete
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+    </AuthGuard>
   );
 }

@@ -11,10 +11,13 @@ urlpatterns = [
     path("auth/login/", TokenObtainPairView.as_view(), name="login"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/me/", views.MeView.as_view(), name="me"),
+    path("auth/logout/", views.LogoutView.as_view(), name="logout"),
+    path("auth/password/change/", views.ChangePasswordView.as_view(), name="password-change"),
     # Uploads
     path("uploads/", views.UploadCreateView.as_view(), name="upload-create"),
     path("uploads/list/", views.UploadListView.as_view(), name="upload-list"),
     path("uploads/<uuid:id>/status/", views.UploadStatusView.as_view(), name="upload-status"),
+    path("uploads/<uuid:id>/", views.UploadDeleteView.as_view(), name="upload-delete"),
     # Dashboards
     path("dashboards/", views.DashboardListView.as_view(), name="dashboard-list"),
     path("dashboards/<uuid:id>/", views.DashboardDetailView.as_view(), name="dashboard-detail"),

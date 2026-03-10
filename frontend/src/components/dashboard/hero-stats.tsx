@@ -43,7 +43,7 @@ export function HeroStats({
       </span>
 
       <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.5rem,6vw,5rem)] font-extrabold leading-[1.05] mb-3 animate-[fadeUp_0.8s_ease_forwards_0.4s] opacity-0 bg-gradient-to-br from-text-primary to-text-secondary bg-clip-text text-transparent">
-        Your Sonic Universe
+        Your Musical Universe
       </h1>
 
       <p className="text-lg text-text-secondary font-light mb-14 animate-[fadeUp_0.8s_ease_forwards_0.6s] opacity-0">

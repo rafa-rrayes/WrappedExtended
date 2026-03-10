@@ -39,6 +39,13 @@ def upload_file_to_s3(file_obj, key: str) -> None:
     logger.info("Uploaded %s to S3", key)
 
 
+def delete_file_from_s3(key: str) -> None:
+    """Delete a file from S3."""
+    client = _get_client()
+    client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=key)
+    logger.info("Deleted %s from S3", key)
+
+
 def download_file_from_s3(key: str) -> bytes:
     """Download a file from S3 and return its bytes."""
     client = _get_client()

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Syne, Outfit } from "next/font/google";
+import { AuthProvider } from "@/lib/context/auth-context";
+import { ToastProvider } from "@/lib/context/toast-context";
+import { Header } from "@/components/layout/header";
 import "./globals.css";
 
 const syne = Syne({
@@ -27,7 +30,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${syne.variable} ${outfit.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <ToastProvider>
+            <Header />
+            {children}
+          </ToastProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }
