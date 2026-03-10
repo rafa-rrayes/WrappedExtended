@@ -63,5 +63,8 @@ celerybeat.pid
 # uv
 .python-version
 
+# TypeScript build info
+*.tsbuildinfo
+
 # MinIO data
 minio_data/
