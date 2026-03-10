@@ -20,12 +20,15 @@ def _get_client():
             aws_secret_access_key=settings.S3_SECRET_KEY,
             region_name=settings.S3_REGION,
         )
-        # Ensure bucket exists (dev convenience)
+        # Auto-create bucket in dev only (R2 tokens lack CreateBucket permission)
         try:
             _client.head_bucket(Bucket=settings.S3_BUCKET_NAME)
         except Exception:
-            _client.create_bucket(Bucket=settings.S3_BUCKET_NAME)
-            logger.info("Created S3 bucket: %s", settings.S3_BUCKET_NAME)
+            if settings.DEBUG:
+                _client.create_bucket(Bucket=settings.S3_BUCKET_NAME)
+                logger.info("Created S3 bucket: %s", settings.S3_BUCKET_NAME)
+            else:
+                raise
     return _client
 
 
