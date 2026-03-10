@@ -1,0 +1,2 @@
+web: uv run gunicorn wrapex.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+worker: uv run celery -A wrapex worker --loglevel=info --concurrency=2
