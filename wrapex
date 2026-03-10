@@ -14,22 +14,32 @@ RESET='\033[0m'
 log()  { echo -e "${GREEN}[wrapex]${RESET} $1"; }
 warn() { echo -e "${GOLD}[wrapex]${RESET} $1"; }
 
-# Cleanup background processes on exit
+# Cleanup background processes and infra on exit
 PIDS=()
+INFRA_STARTED=false
 cleanup() {
     log "Shutting down..."
     for pid in "${PIDS[@]}"; do
         kill "$pid" 2>/dev/null || true
     done
     wait 2>/dev/null
+    if [ "$INFRA_STARTED" = true ]; then
+        log "Stopping infrastructure containers..."
+        docker compose stop postgres redis minio 2>/dev/null || true
+    fi
     log "Done."
 }
 trap cleanup EXIT INT TERM
 
 cmd_dev() {
-    log "Starting WrapEx development servers..."
+    log "Starting WrapEx development environment..."
 
-    # Check deps are installed
+    # ── Preflight checks ──
+    command -v docker >/dev/null 2>&1 || { warn "Docker is required for infrastructure services (Postgres, Redis, MinIO)"; exit 1; }
+    command -v uv >/dev/null 2>&1     || { warn "uv is required — install from https://docs.astral.sh/uv/"; exit 1; }
+    command -v pnpm >/dev/null 2>&1   || { warn "pnpm is required — install from https://pnpm.io/"; exit 1; }
+
+    # ── Install deps if needed ──
     if [ ! -d "$BACKEND_DIR/.venv" ]; then
         log "Installing backend dependencies..."
         (cd "$BACKEND_DIR" && uv sync)
@@ -40,27 +50,68 @@ cmd_dev() {
         (cd "$FRONTEND_DIR" && pnpm install)
     fi
 
-    # Copy .env if missing
+    # ── Ensure backend .env exists with localhost values ──
     if [ ! -f "$BACKEND_DIR/.env" ] && [ -f "$BACKEND_DIR/.env.example" ]; then
         cp "$BACKEND_DIR/.env.example" "$BACKEND_DIR/.env"
         warn "Created backend/.env from .env.example — edit as needed"
     fi
 
-    # Run migrations (will warn if DB is unavailable)
+    # ── Ensure frontend .env exists ──
+    if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
+        echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1" > "$FRONTEND_DIR/.env.local"
+        warn "Created frontend/.env.local"
+    fi
+
+    # ── Start infrastructure services via Docker Compose ──
+    log "Starting infrastructure (Postgres, Redis, MinIO)..."
+    docker compose up -d postgres redis minio
+    INFRA_STARTED=true
+
+    # Wait for services to be healthy
+    log "Waiting for Postgres..."
+    until docker compose exec -T postgres pg_isready -U wrapex >/dev/null 2>&1; do
+        sleep 1
+    done
+    log "Postgres ready"
+
+    log "Waiting for Redis..."
+    until docker compose exec -T redis redis-cli ping >/dev/null 2>&1; do
+        sleep 1
+    done
+    log "Redis ready"
+
+    log "Waiting for MinIO..."
+    until curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1; do
+        sleep 1
+    done
+    log "MinIO ready"
+
+    # ── Run migrations ──
     log "Running migrations..."
-    (cd "$BACKEND_DIR" && uv run python manage.py migrate --noinput 2>&1) || warn "Migration failed — is PostgreSQL running?"
+    (cd "$BACKEND_DIR" && uv run python manage.py migrate --noinput 2>&1) || { warn "Migration failed"; exit 1; }
 
-    # Start backend
+    # ── Start Django backend ──
     log "Starting Django on ${DIM}http://localhost:8000${RESET}"
-    (cd "$BACKEND_DIR" && uv run python manage.py runserver 0.0.0.0:8000 2>&1 | sed "s/^/  [backend] /") &
+    (cd "$BACKEND_DIR" && uv run python manage.py runserver 0.0.0.0:8000 2>&1 | sed "s/^/  ${GREEN}[backend]${RESET}  /") &
     PIDS+=($!)
 
-    # Start frontend
+    # ── Start Celery worker ──
+    log "Starting Celery worker"
+    (cd "$BACKEND_DIR" && uv run celery -A wrapex worker --loglevel=info --concurrency=2 2>&1 | sed "s/^/  ${GOLD}[celery]${RESET}   /") &
+    PIDS+=($!)
+
+    # ── Start Next.js frontend ──
     log "Starting Next.js on ${DIM}http://localhost:3000${RESET}"
-    (cd "$FRONTEND_DIR" && pnpm dev 2>&1 | sed "s/^/  [frontend] /") &
+    (cd "$FRONTEND_DIR" && pnpm dev 2>&1 | sed "s/^/  ${DIM}[frontend]${RESET} /") &
     PIDS+=($!)
 
-    log "Both servers running. Press Ctrl+C to stop."
+    echo ""
+    log "All services running:"
+    echo -e "  ${GREEN}Frontend${RESET}  → http://localhost:3000"
+    echo -e "  ${GREEN}Backend${RESET}   → http://localhost:8000"
+    echo -e "  ${GREEN}MinIO UI${RESET}  → http://localhost:9001 ${DIM}(minioadmin/minioadmin)${RESET}"
+    echo ""
+    log "Press Ctrl+C to stop all services."
     wait
 }
 
@@ -78,6 +129,12 @@ cmd_migrate() {
     (cd "$BACKEND_DIR" && uv run python manage.py migrate "$@")
 }
 
+cmd_stop() {
+    log "Stopping infrastructure containers..."
+    docker compose stop postgres redis minio
+    log "Done."
+}
+
 cmd_help() {
     echo ""
     echo -e "${GREEN}WrapEx${RESET} — Spotify Streaming History Dashboard"
@@ -85,9 +142,10 @@ cmd_help() {
     echo "Usage: ./wrapex <command>"
     echo ""
     echo "Commands:"
-    echo "  dev        Start backend + frontend dev servers"
+    echo "  dev        Start infra + backend + celery + frontend (full local dev)"
     echo "  docker     Start all services via Docker Compose"
     echo "  migrate    Run Django migrations"
+    echo "  stop       Stop infrastructure containers (Postgres, Redis, MinIO)"
     echo "  help       Show this help"
     echo ""
 }
@@ -96,5 +154,6 @@ case "${1:-help}" in
     dev)     shift; cmd_dev "$@" ;;
     docker)  shift; cmd_docker "$@" ;;
     migrate) shift; cmd_migrate "$@" ;;
+    stop)    shift; cmd_stop "$@" ;;
     help|*)  cmd_help ;;
 esac

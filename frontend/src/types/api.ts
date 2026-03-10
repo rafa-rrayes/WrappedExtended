@@ -18,6 +18,7 @@ export interface UploadStatus {
   status: Upload["status"];
   progress_pct: number;
   error_message: string;
+  dashboard_id: string | null;
 }
 
 export interface UserProfile {

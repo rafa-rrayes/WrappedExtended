@@ -55,4 +55,8 @@ def ingest(file_key: str) -> pl.LazyFrame:
         raise ValueError("Records don't match expected Spotify Extended Streaming History format.")
 
     logger.info("Ingested %d records from %s", len(records), file_key)
-    return pl.LazyFrame(records, schema_overrides={"ms_played": pl.Int64})
+    return pl.LazyFrame(
+        records,
+        schema_overrides={"ms_played": pl.Int64},
+        infer_schema_length=None,
+    )

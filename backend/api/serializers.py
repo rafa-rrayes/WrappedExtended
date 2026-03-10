@@ -42,10 +42,18 @@ class UploadSerializer(serializers.ModelSerializer):
 class UploadStatusSerializer(serializers.ModelSerializer):
     """Lightweight serializer for polling."""
 
+    dashboard_id = serializers.SerializerMethodField()
+
     class Meta:
         model = Upload
-        fields = ("id", "status", "progress_pct", "error_message")
-        read_only_fields = fields
+        fields = ("id", "status", "progress_pct", "error_message", "dashboard_id")
+        read_only_fields = ("id", "status", "progress_pct", "error_message")
+
+    def get_dashboard_id(self, obj: Upload) -> str | None:
+        if obj.status != Upload.Status.COMPLETED:
+            return None
+        dashboard = getattr(obj, "dashboard", None)
+        return str(dashboard.id) if dashboard else None
 
 
 class DashboardSummarySerializer(serializers.ModelSerializer):

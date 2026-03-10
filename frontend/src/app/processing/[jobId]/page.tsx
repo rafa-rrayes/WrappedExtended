@@ -8,9 +8,8 @@ export default function ProcessingPage() {
   const router = useRouter();
   const { data, error } = useUploadStatus(params.jobId);
 
-  if (data?.status === "completed") {
-    // Redirect to dashboard once processing is done
-    router.push(`/dashboard/${params.jobId}`);
+  if (data?.status === "completed" && data.dashboard_id) {
+    router.push(`/dashboard/${data.dashboard_id}`);
   }
 
   return (
