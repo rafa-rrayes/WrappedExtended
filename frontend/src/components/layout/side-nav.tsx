@@ -7,11 +7,23 @@ const NAV_ITEMS = [
   { id: "hero", label: "Overview" },
   { id: "artists", label: "Artists" },
   { id: "tracks", label: "Tracks" },
-  { id: "timeline", label: "Timeline" },
-  { id: "when", label: "Schedule" },
-  { id: "habits", label: "Habits" },
   { id: "albums", label: "Albums" },
-  { id: "flow", label: "Flow" },
+  { id: "timeline", label: "Timeline" },
+  { id: "yoy", label: "Year / Year" },
+  { id: "when", label: "Schedule" },
+  { id: "heatmap", label: "Heatmap" },
+  { id: "calendar", label: "Calendar" },
+  { id: "artist-discovery", label: "Discovery" },
+  { id: "obsession", label: "Obsessions" },
+  { id: "habits", label: "Habits" },
+  { id: "platforms", label: "Platforms" },
+  { id: "skips", label: "Skips" },
+  { id: "geo", label: "Geography" },
+  { id: "nostalgia", label: "Nostalgia" },
+  { id: "stats", label: "Stats" },
+  { id: "weekend", label: "Wknd / Wkdy" },
+  { id: "latenight", label: "Late Night" },
+  { id: "wrapped", label: "Wrapped" },
 ];
 
 export function SideNav() {
@@ -38,16 +50,16 @@ export function SideNav() {
   }, []);
 
   return (
-    <nav className="fixed left-0 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1.5 py-4 px-2.5 bg-bg-primary/85 backdrop-blur-xl border-r border-border rounded-r-[var(--radius-card)] md:flex hidden">
+    <nav className="fixed left-0 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1 py-3 px-2 bg-bg-primary/85 backdrop-blur-xl border-r border-border rounded-r-[var(--radius-card)] md:flex hidden">
       {NAV_ITEMS.map((item) => (
         <a
           key={item.id}
           href={`#${item.id}`}
-          className="group flex items-center gap-2.5 px-2 py-1.5 rounded-[var(--radius-sm)] transition-all"
+          className="group flex items-center gap-2.5 px-2 py-1 rounded-[var(--radius-sm)] transition-all"
         >
           <span
             className={cn(
-              "w-2 h-2 rounded-full transition-all shrink-0",
+              "w-1.5 h-1.5 rounded-full transition-all shrink-0",
               active === item.id
                 ? "bg-green shadow-[0_0_10px_var(--color-green-glow)]"
                 : "bg-text-muted group-hover:bg-text-secondary"
@@ -55,7 +67,7 @@ export function SideNav() {
           />
           <span
             className={cn(
-              "font-[family-name:var(--font-body)] text-[0.7rem] font-medium whitespace-nowrap tracking-wider uppercase transition-all overflow-hidden",
+              "font-[family-name:var(--font-body)] text-[0.6rem] font-medium whitespace-nowrap tracking-wider uppercase transition-all overflow-hidden",
               active === item.id
                 ? "opacity-100 max-w-[120px] mr-1 text-text-secondary"
                 : "opacity-0 max-w-0 text-text-muted group-hover:opacity-100 group-hover:max-w-[120px] group-hover:mr-1"
