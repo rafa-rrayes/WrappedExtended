@@ -148,6 +148,73 @@ export const apiClient = {
     if (!res.ok) throw new Error("Dashboard not found");
     return res.json();
   },
+
+  // ── Dashboard Features ──────────────────────────────────────────────────
+
+  async timeMachine(
+    dashboardId: string,
+    body: { start: string; end: string; compare_start?: string; compare_end?: string },
+  ) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/time-machine/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  },
+
+  async searchSuggest(dashboardId: string, q: string) {
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/search/suggest/?q=${encodeURIComponent(q)}`,
+    );
+    return res.json();
+  },
+
+  async searchEntity(dashboardId: string, q: string, type: "artist" | "track") {
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/search/?q=${encodeURIComponent(q)}&type=${type}`,
+    );
+    return res.json();
+  },
+
+  async chartBuilder(
+    dashboardId: string,
+    body: { metric: string; group_by: string; limit: number },
+  ) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/chart/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  },
+
+  async whatIf(
+    dashboardId: string,
+    body: { exclude_artists?: string[]; exclude_tracks?: string[]; min_ms?: number },
+  ) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/what-if/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  },
+
+  async getBenchmarks(dashboardId: string) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/benchmarks/`);
+    return res.json();
+  },
+
+  async getJourney(dashboardId: string, params: { year: number; month?: number; day?: number }) {
+    const searchParams = new URLSearchParams({ year: String(params.year) });
+    if (params.month) searchParams.set("month", String(params.month));
+    if (params.day) searchParams.set("day", String(params.day));
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/journey/?${searchParams}`,
+    );
+    return res.json();
+  },
 };
 
 /** SWR-compatible fetcher */

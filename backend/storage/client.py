@@ -46,6 +46,15 @@ def delete_file_from_s3(key: str) -> None:
     logger.info("Deleted %s from S3", key)
 
 
+def upload_bytes_to_s3(data: bytes, key: str) -> None:
+    """Upload raw bytes to S3."""
+    import io
+
+    client = _get_client()
+    client.upload_fileobj(io.BytesIO(data), settings.S3_BUCKET_NAME, key)
+    logger.info("Uploaded %s (%d bytes) to S3", key, len(data))
+
+
 def download_file_from_s3(key: str) -> bytes:
     """Download a file from S3 and return its bytes."""
     client = _get_client()

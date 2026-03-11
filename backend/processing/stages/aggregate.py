@@ -12,10 +12,9 @@ from .analyzers import run_all_analyzers
 logger = logging.getLogger(__name__)
 
 
-def aggregate(lf: pl.LazyFrame) -> dict:
+def aggregate(df: pl.DataFrame) -> dict:
     """Compute all dashboard statistics. Returns a dict ready for JSONField storage."""
     logger.info("Aggregating stats...")
-    df = lf.collect()
 
     stats = run_all_analyzers(df)
 

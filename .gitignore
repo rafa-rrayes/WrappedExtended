@@ -68,3 +68,5 @@ celerybeat.pid
 
 # MinIO data
 minio_data/
+
+changelog.md

@@ -1,4 +1,4 @@
-"""Stage 4: Export — Save aggregated results to ProcessedDashboard."""
+"""Stage 5: Export — Save aggregated results to ProcessedDashboard."""
 
 import logging
 
@@ -7,7 +7,7 @@ from api.models import ProcessedDashboard, Upload
 logger = logging.getLogger(__name__)
 
 
-def export(upload: Upload, stats: dict) -> ProcessedDashboard:
+def export(upload: Upload, stats: dict, parquet_key: str = "") -> ProcessedDashboard:
     """Create a ProcessedDashboard record with the aggregated stats."""
     logger.info("Exporting results for upload %s", upload.id)
 
@@ -15,6 +15,7 @@ def export(upload: Upload, stats: dict) -> ProcessedDashboard:
         upload=upload,
         user=upload.user,
         dashboard_data=stats,
+        parquet_key=parquet_key,
         total_hours=stats.get("total_hours", 0),
         total_streams=stats.get("total_streams", 0),
         unique_artists=stats.get("unique_artists", 0),

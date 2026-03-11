@@ -13,6 +13,7 @@ from . import (
     geographic,
     heatmaps,
     line_charts,
+    mood_heuristics,
     nostalgia,
     scatter_plots,
     spotify_specific,
@@ -36,6 +37,7 @@ _ANALYZERS: list[tuple[str, callable]] = [
     ("nostalgia", nostalgia.compute_nostalgia),
     ("context", context.compute_context),
     ("wrapped", wrapped.compute_wrapped),
+    ("mood_heuristics", mood_heuristics.compute_mood_heuristics),
 ]
 
 

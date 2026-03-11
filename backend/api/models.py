@@ -51,6 +51,7 @@ class ProcessedDashboard(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboards")
 
     dashboard_data = models.JSONField(default=dict, help_text="Full aggregated stats blob")
+    parquet_key = models.CharField(max_length=500, blank=True, help_text="S3 key for cleaned Parquet data")
 
     # Denormalized summary fields for list views
     total_hours = models.FloatField(default=0)
@@ -72,3 +73,13 @@ class ProcessedDashboard(models.Model):
 
     def __str__(self):
         return f"Dashboard for {self.upload.original_filename}"
+
+
+class GlobalBenchmark(models.Model):
+    metric = models.CharField(max_length=100, unique=True)
+    percentiles = models.JSONField(default=dict, help_text="p10/p25/p50/p75/p90/p95/p99 values")
+    sample_size = models.IntegerField(default=0)
+    computed_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.metric} (n={self.sample_size})"

@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
+from . import views_dashboard_features as feature_views
 
 app_name = "api"
 
@@ -21,5 +22,45 @@ urlpatterns = [
     # Dashboards
     path("dashboards/", views.DashboardListView.as_view(), name="dashboard-list"),
     path("dashboards/<uuid:id>/", views.DashboardDetailView.as_view(), name="dashboard-detail"),
-    path("dashboards/shared/<slug:share_slug>/", views.DashboardPublicView.as_view(), name="dashboard-public"),
+    path(
+        "dashboards/shared/<slug:share_slug>/",
+        views.DashboardPublicView.as_view(),
+        name="dashboard-public",
+    ),
+    # Dashboard features
+    path(
+        "dashboards/<uuid:dashboard_id>/time-machine/",
+        feature_views.TimeMachineView.as_view(),
+        name="time-machine",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/search/suggest/",
+        feature_views.SearchSuggestView.as_view(),
+        name="search-suggest",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/search/",
+        feature_views.SearchEntityView.as_view(),
+        name="search-entity",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/chart/",
+        feature_views.ChartBuilderView.as_view(),
+        name="chart-builder",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/what-if/",
+        feature_views.WhatIfView.as_view(),
+        name="what-if",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/benchmarks/",
+        feature_views.BenchmarksView.as_view(),
+        name="benchmarks",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/journey/",
+        feature_views.JourneyView.as_view(),
+        name="journey",
+    ),
 ]

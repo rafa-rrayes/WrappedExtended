@@ -96,6 +96,9 @@ export interface DashboardData {
 
   // ── Wrapped ──────────────────────────────────────────────────────────────
   wrapped_summaries?: Record<string, WrappedYear>;
+
+  // ── Mood (behavioral heuristics) ─────────────────────────────────────────
+  mood_timeline?: MoodEntry[];
 }
 
 // ── Core stat interfaces (unchanged) ─────────────────────────────────────────
@@ -424,4 +427,16 @@ export interface WrappedYear {
   top_album?: string;
   top_album_artist?: string;
   top_album_hours?: number;
+}
+
+// ── Mood ─────────────────────────────────────────────────────────────────────
+
+export interface MoodEntry {
+  month: string;
+  mood_score: number;
+  energy: number;
+  engagement: number;
+  immersion: number;
+  exploration: number;
+  total_hours: number;
 }
