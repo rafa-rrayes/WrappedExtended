@@ -110,7 +110,7 @@ class UploadCreateView(generics.CreateAPIView):
         # Create Stripe Checkout Session
         frontend_url = django_settings.FRONTEND_URL
         try:
-            checkout_session = stripe.checkout.sessions.create(
+            checkout_session = stripe.checkout.Session.create(
                 line_items=[{"price": django_settings.STRIPE_PRICE_ID, "quantity": 1}],
                 mode="payment",
                 success_url=f"{frontend_url}/processing/{upload.id}?payment=success",

@@ -93,7 +93,7 @@ class UploadStatusSerializer(serializers.ModelSerializer):
 
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         try:
-            session = stripe.checkout.sessions.retrieve(payment.stripe_checkout_session_id)
+            session = stripe.checkout.Session.retrieve(payment.stripe_checkout_session_id)
             return session.url
         except stripe.StripeError:
             return None
