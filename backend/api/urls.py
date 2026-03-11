@@ -14,6 +14,8 @@ urlpatterns = [
     path("auth/me/", views.MeView.as_view(), name="me"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
     path("auth/password/change/", views.ChangePasswordView.as_view(), name="password-change"),
+    # Payments
+    path("payments/webhook/", views.stripe_webhook, name="stripe-webhook"),
     # Uploads
     path("uploads/", views.UploadCreateView.as_view(), name="upload-create"),
     path("uploads/list/", views.UploadListView.as_view(), name="upload-list"),

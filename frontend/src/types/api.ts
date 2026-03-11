@@ -5,12 +5,13 @@ export interface TokenPair {
 
 export interface Upload {
   id: string;
-  status: "pending" | "validating" | "processing" | "completed" | "failed";
+  status: "pending_payment" | "pending" | "validating" | "processing" | "completed" | "failed";
   original_filename: string;
   file_size_bytes: number;
   progress_pct: number;
   error_message: string;
   created_at: string;
+  checkout_url?: string;
 }
 
 export interface UploadStatus {
@@ -19,6 +20,7 @@ export interface UploadStatus {
   progress_pct: number;
   error_message: string;
   dashboard_id: string | null;
+  checkout_url: string | null;
 }
 
 export interface UserProfile {

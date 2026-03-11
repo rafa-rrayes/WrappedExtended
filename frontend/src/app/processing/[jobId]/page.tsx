@@ -13,12 +13,20 @@ export default function ProcessingPage() {
     router.push(`/dashboard/${data.dashboard_id}`);
   }
 
+  const isPendingPayment = data?.status === "pending_payment";
+  const isFailed = data?.status === "failed";
+  const title = isFailed
+    ? "Processing Failed"
+    : isPendingPayment
+      ? "Confirming Payment..."
+      : "Processing Your History";
+
   return (
     <AuthGuard>
       <main className="min-h-screen flex items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-extrabold mb-4">
-            {data?.status === "failed" ? "Processing Failed" : "Processing Your History"}
+            {title}
           </h1>
 
           {error && (
@@ -27,7 +35,7 @@ export default function ProcessingPage() {
             </p>
           )}
 
-          {data?.status === "failed" ? (
+          {isFailed ? (
             <div>
               <p className="text-text-secondary mb-4">
                 {data.error_message || "An unexpected error occurred."}
@@ -38,6 +46,15 @@ export default function ProcessingPage() {
               >
                 Try Again
               </button>
+            </div>
+          ) : isPendingPayment ? (
+            <div>
+              <p className="text-text-secondary mb-4">
+                Your payment is being confirmed. This usually takes a few seconds...
+              </p>
+              <div className="flex justify-center">
+                <div className="w-8 h-8 border-2 border-green border-t-transparent rounded-full animate-spin" />
+              </div>
             </div>
           ) : (
             <div>

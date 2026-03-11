@@ -1,12 +1,17 @@
+import stripe
+from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from processing.tasks import process_upload
 from storage.client import delete_file_from_s3, upload_file_to_s3
 
-from .models import ProcessedDashboard, Upload, UserProfile
+from .models import Payment, ProcessedDashboard, Upload, UserProfile
 from .serializers import (
     ChangePasswordSerializer,
     DashboardDetailSerializer,
@@ -17,6 +22,8 @@ from .serializers import (
     UploadStatusSerializer,
     UserProfileSerializer,
 )
+
+stripe.api_key = django_settings.STRIPE_SECRET_KEY
 
 User = get_user_model()
 
@@ -91,21 +98,44 @@ class UploadCreateView(generics.CreateAPIView):
         file_key = f"uploads/{request.user.id}/{file.name}"
         upload_file_to_s3(file, file_key)
 
-        # Create Upload record
+        # Create Upload record — don't process until paid
         upload = Upload.objects.create(
             user=request.user,
             file_key=file_key,
             original_filename=file.name,
             file_size_bytes=file.size,
-            status=Upload.Status.PENDING,
+            status=Upload.Status.PENDING_PAYMENT,
         )
 
-        # Dispatch Celery task
-        task = process_upload.delay(str(upload.id))
-        upload.celery_task_id = task.id
-        upload.save(update_fields=["celery_task_id"])
+        # Create Stripe Checkout Session
+        frontend_url = django_settings.FRONTEND_URL
+        try:
+            checkout_session = stripe.checkout.sessions.create(
+                line_items=[{"price": django_settings.STRIPE_PRICE_ID, "quantity": 1}],
+                mode="payment",
+                success_url=f"{frontend_url}/processing/{upload.id}?payment=success",
+                cancel_url=f"{frontend_url}/upload?payment=cancelled",
+                metadata={"upload_id": str(upload.id), "user_id": str(request.user.id)},
+            )
+        except stripe.StripeError as e:
+            upload.delete()
+            delete_file_from_s3(file_key)
+            return Response(
+                {"detail": f"Payment setup failed: {e}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
-        return Response(UploadSerializer(upload).data, status=status.HTTP_201_CREATED)
+        # Create Payment record
+        Payment.objects.create(
+            upload=upload,
+            user=request.user,
+            stripe_checkout_session_id=checkout_session.id,
+        )
+
+        return Response(
+            {**UploadSerializer(upload).data, "checkout_url": checkout_session.url},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class UploadListView(generics.ListAPIView):
@@ -166,3 +196,48 @@ class DashboardPublicView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return ProcessedDashboard.objects.filter(is_public=True)
+
+
+# ─── Stripe Webhook ──────────────────────────────────────────────────────────
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, django_settings.STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, stripe.SignatureVerificationError):
+        return HttpResponse(status=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        checkout_session_id = session["id"]
+
+        try:
+            payment = Payment.objects.select_related("upload").get(
+                stripe_checkout_session_id=checkout_session_id
+            )
+        except Payment.DoesNotExist:
+            return HttpResponse(status=200)
+
+        # Mark payment as completed
+        payment.status = Payment.Status.COMPLETED
+        payment.stripe_payment_intent_id = session.get("payment_intent", "")
+        payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+
+        # Start processing
+        upload = payment.upload
+        upload.status = Upload.Status.PENDING
+        upload.save(update_fields=["status", "updated_at"])
+
+        task = process_upload.delay(str(upload.id))
+        upload.celery_task_id = task.id
+        upload.save(update_fields=["celery_task_id"])
+
+    return HttpResponse(status=200)

@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { AuthGuard } from "@/components/auth/auth-guard";
 
 export default function UploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("payment") === "cancelled" ? "Payment was cancelled. Please try again." : ""
+  );
 
   const acceptFile = useCallback((f: File) => {
     if (!f.name.endsWith(".zip")) {
@@ -45,7 +48,13 @@ export default function UploadPage() {
     setUploading(true);
     try {
       const result = await apiClient.uploadFile(file);
-      router.push(`/processing/${result.id}`);
+      if (result.checkout_url) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.checkout_url;
+      } else {
+        // Fallback: go to processing page
+        router.push(`/processing/${result.id}`);
+      }
     } catch {
       setError("Upload failed. Please try again.");
     } finally {
@@ -127,7 +136,7 @@ export default function UploadPage() {
             disabled={!file || uploading}
             className="mt-6 w-full bg-green hover:bg-green/90 text-bg-deep font-semibold py-3 rounded-[var(--radius-sm)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploading ? "Uploading..." : "Upload & Analyze"}
+            {uploading ? "Uploading..." : "Upload & Pay $5"}
           </button>
 
           {/* Instructions */}

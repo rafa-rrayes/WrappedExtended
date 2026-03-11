@@ -68,10 +68,11 @@ class UploadStatusSerializer(serializers.ModelSerializer):
     """Lightweight serializer for polling."""
 
     dashboard_id = serializers.SerializerMethodField()
+    checkout_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Upload
-        fields = ("id", "status", "progress_pct", "error_message", "dashboard_id")
+        fields = ("id", "status", "progress_pct", "error_message", "dashboard_id", "checkout_url")
         read_only_fields = ("id", "status", "progress_pct", "error_message")
 
     def get_dashboard_id(self, obj: Upload) -> str | None:
@@ -79,6 +80,23 @@ class UploadStatusSerializer(serializers.ModelSerializer):
             return None
         dashboard = getattr(obj, "dashboard", None)
         return str(dashboard.id) if dashboard else None
+
+    def get_checkout_url(self, obj: Upload) -> str | None:
+        if obj.status != Upload.Status.PENDING_PAYMENT:
+            return None
+        payment = getattr(obj, "payment", None)
+        if not payment:
+            return None
+        # Retrieve fresh checkout URL from Stripe
+        import stripe
+        from django.conf import settings as django_settings
+
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        try:
+            session = stripe.checkout.sessions.retrieve(payment.stripe_checkout_session_id)
+            return session.url
+        except stripe.StripeError:
+            return None
 
 
 class DashboardSummarySerializer(serializers.ModelSerializer):

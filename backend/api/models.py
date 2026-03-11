@@ -19,6 +19,7 @@ class UserProfile(models.Model):
 
 class Upload(models.Model):
     class Status(models.TextChoices):
+        PENDING_PAYMENT = "pending_payment", "Pending Payment"
         PENDING = "pending", "Pending"
         VALIDATING = "validating", "Validating"
         PROCESSING = "processing", "Processing"
@@ -73,6 +74,30 @@ class ProcessedDashboard(models.Model):
 
     def __str__(self):
         return f"Dashboard for {self.upload.original_filename}"
+
+
+class Payment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    upload = models.OneToOneField(Upload, on_delete=models.CASCADE, related_name="payment")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments"
+    )
+    stripe_checkout_session_id = models.CharField(max_length=255, unique=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
+    amount_cents = models.IntegerField(default=500)
+    currency = models.CharField(max_length=3, default="usd")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment {self.status} for {self.upload.original_filename}"
 
 
 class GlobalBenchmark(models.Model):
