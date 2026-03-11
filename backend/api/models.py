@@ -52,7 +52,7 @@ class ProcessedDashboard(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboards")
 
     dashboard_data = models.JSONField(default=dict, help_text="Full aggregated stats blob")
-    parquet_key = models.CharField(max_length=500, blank=True, help_text="S3 key for cleaned Parquet data")
+    parquet_key = models.CharField(max_length=500, blank=True, default="", help_text="S3 key for cleaned Parquet data")
 
     # Denormalized summary fields for list views
     total_hours = models.FloatField(default=0)
