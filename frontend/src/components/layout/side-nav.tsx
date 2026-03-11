@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -28,6 +29,8 @@ const NAV_ITEMS = [
 
 export function SideNav() {
   const [active, setActive] = useState("hero");
+  const { scrollYProgress } = useScroll();
+  const progressHeight = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -51,11 +54,19 @@ export function SideNav() {
 
   return (
     <nav className="fixed left-0 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1 py-3 px-2 bg-bg-primary/85 backdrop-blur-xl border-r border-border rounded-r-[var(--radius-card)] md:flex hidden">
+      {/* Scroll progress line */}
+      <div className="absolute left-[13px] top-3 bottom-3 w-[2px] bg-white/[0.06] rounded-full pointer-events-none">
+        <motion.div
+          className="absolute top-0 left-0 w-full bg-green rounded-full"
+          style={{ height: progressHeight }}
+        />
+      </div>
+
       {NAV_ITEMS.map((item) => (
         <a
           key={item.id}
           href={`#${item.id}`}
-          className="group flex items-center gap-2.5 px-2 py-1 rounded-[var(--radius-sm)] transition-all"
+          className="group flex items-center gap-2.5 px-2 py-1 rounded-[var(--radius-sm)] transition-all relative z-10"
         >
           <span
             className={cn(

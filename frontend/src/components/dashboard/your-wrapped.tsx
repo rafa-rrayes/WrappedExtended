@@ -1,7 +1,10 @@
 "use client";
 
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import type { WrappedYear } from "@/types/dashboard";
 import { formatHours, formatNumber } from "@/lib/utils";
+import { SectionReveal } from "./section-reveal";
 
 interface YourWrappedProps {
   data: Record<string, WrappedYear>;
@@ -22,7 +25,7 @@ export function YourWrapped({ data }: YourWrappedProps) {
   ];
 
   return (
-    <section id="wrapped" className="py-24 opacity-0 animate-[fadeUp_0.8s_ease_forwards]">
+    <SectionReveal id="wrapped" className="py-24">
       <div className="mb-12">
         <span className="font-[family-name:var(--font-display)] text-[0.7rem] font-semibold tracking-[0.2em] uppercase text-green mb-2.5 block">
           19 — Your Wrapped
@@ -34,109 +37,135 @@ export function YourWrapped({ data }: YourWrappedProps) {
 
       <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-green scrollbar-track-bg-deep">
         {years.map(([year, w], i) => (
-          <div
+          <WrappedCard
             key={year}
-            className={`snap-center shrink-0 w-[320px] bg-gradient-to-br ${
-              CARD_GRADIENTS[i % CARD_GRADIENTS.length]
-            } border border-border rounded-[var(--radius-card)] p-6 relative overflow-hidden`}
-          >
-            {/* Background year */}
-            <div className="absolute top-2 right-4 font-[family-name:var(--font-display)] text-[6rem] font-extrabold text-white/[0.03] leading-none pointer-events-none select-none">
-              {year}
-            </div>
-
-            <div className="relative z-10">
-              {/* Year label */}
-              <div className="font-[family-name:var(--font-display)] text-xl font-extrabold text-text-primary mb-5">
-                {year}
-              </div>
-
-              {/* Stats grid */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <div>
-                  <div className="font-[family-name:var(--font-display)] text-lg font-bold text-green">
-                    {formatHours(w.total_hours)}
-                  </div>
-                  <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
-                    Hours
-                  </div>
-                </div>
-                <div>
-                  <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
-                    {formatNumber(w.total_streams)}
-                  </div>
-                  <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
-                    Streams
-                  </div>
-                </div>
-                <div>
-                  <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
-                    {formatNumber(w.unique_artists)}
-                  </div>
-                  <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
-                    Artists
-                  </div>
-                </div>
-                <div>
-                  <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
-                    {formatNumber(w.unique_tracks)}
-                  </div>
-                  <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
-                    Tracks
-                  </div>
-                </div>
-              </div>
-
-              {/* Top content */}
-              <div className="space-y-3 border-t border-white/[0.06] pt-4">
-                {w.top_artist && (
-                  <div>
-                    <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
-                      Top Artist
-                    </div>
-                    <div className="text-text-primary text-sm font-semibold truncate">
-                      {w.top_artist}
-                    </div>
-                    {w.top_artist_hours != null && (
-                      <div className="text-green text-[0.6rem]">
-                        {formatHours(w.top_artist_hours)}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {w.top_track && (
-                  <div>
-                    <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
-                      Top Track
-                    </div>
-                    <div className="text-text-primary text-sm font-semibold truncate">
-                      {w.top_track}
-                    </div>
-                    <div className="text-text-muted text-[0.55rem]">
-                      {w.top_track_artist}
-                      {w.top_track_plays != null && ` · ${formatNumber(w.top_track_plays)} plays`}
-                    </div>
-                  </div>
-                )}
-                {w.top_album && (
-                  <div>
-                    <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
-                      Top Album
-                    </div>
-                    <div className="text-text-primary text-sm font-semibold truncate">
-                      {w.top_album}
-                    </div>
-                    <div className="text-text-muted text-[0.55rem]">
-                      {w.top_album_artist}
-                      {w.top_album_hours != null && ` · ${formatHours(w.top_album_hours)}`}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+            year={year}
+            w={w}
+            gradient={CARD_GRADIENTS[i % CARD_GRADIENTS.length]}
+            index={i}
+          />
         ))}
       </div>
-    </section>
+    </SectionReveal>
+  );
+}
+
+function WrappedCard({
+  year,
+  w,
+  gradient,
+  index,
+}: {
+  year: string;
+  w: WrappedYear;
+  gradient: string;
+  index: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-10% 0px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      className={`snap-center shrink-0 w-[320px] bg-gradient-to-br ${gradient} border border-border rounded-[var(--radius-card)] p-6 relative overflow-hidden`}
+      initial={{ opacity: 0, x: 60 }}
+      animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: 60 }}
+      transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.08 }}
+    >
+      {/* Background year */}
+      <div className="absolute top-2 right-4 font-[family-name:var(--font-display)] text-[6rem] font-extrabold text-white/[0.03] leading-none pointer-events-none select-none">
+        {year}
+      </div>
+
+      <div className="relative z-10">
+        {/* Year label */}
+        <div className="font-[family-name:var(--font-display)] text-xl font-extrabold text-text-primary mb-5">
+          {year}
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div>
+            <div className="font-[family-name:var(--font-display)] text-lg font-bold text-green">
+              {formatHours(w.total_hours)}
+            </div>
+            <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
+              Hours
+            </div>
+          </div>
+          <div>
+            <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
+              {formatNumber(w.total_streams)}
+            </div>
+            <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
+              Streams
+            </div>
+          </div>
+          <div>
+            <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
+              {formatNumber(w.unique_artists)}
+            </div>
+            <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
+              Artists
+            </div>
+          </div>
+          <div>
+            <div className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
+              {formatNumber(w.unique_tracks)}
+            </div>
+            <div className="text-text-muted text-[0.6rem] uppercase tracking-wider">
+              Tracks
+            </div>
+          </div>
+        </div>
+
+        {/* Top content */}
+        <div className="space-y-3 border-t border-white/[0.06] pt-4">
+          {w.top_artist && (
+            <div>
+              <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
+                Top Artist
+              </div>
+              <div className="text-text-primary text-sm font-semibold truncate">
+                {w.top_artist}
+              </div>
+              {w.top_artist_hours != null && (
+                <div className="text-green text-[0.6rem]">
+                  {formatHours(w.top_artist_hours)}
+                </div>
+              )}
+            </div>
+          )}
+          {w.top_track && (
+            <div>
+              <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
+                Top Track
+              </div>
+              <div className="text-text-primary text-sm font-semibold truncate">
+                {w.top_track}
+              </div>
+              <div className="text-text-muted text-[0.55rem]">
+                {w.top_track_artist}
+                {w.top_track_plays != null && ` · ${formatNumber(w.top_track_plays)} plays`}
+              </div>
+            </div>
+          )}
+          {w.top_album && (
+            <div>
+              <div className="text-text-muted text-[0.55rem] uppercase tracking-wider">
+                Top Album
+              </div>
+              <div className="text-text-primary text-sm font-semibold truncate">
+                {w.top_album}
+              </div>
+              <div className="text-text-muted text-[0.55rem]">
+                {w.top_album_artist}
+                {w.top_album_hours != null && ` · ${formatHours(w.top_album_hours)}`}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }

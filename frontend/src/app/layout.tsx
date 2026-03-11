@@ -3,6 +3,7 @@ import { Syne, Outfit } from "next/font/google";
 import { AuthProvider } from "@/lib/context/auth-context";
 import { ToastProvider } from "@/lib/context/toast-context";
 import { Header } from "@/components/layout/header";
+import { MotionProvider } from "@/components/layout/motion-provider";
 import "./globals.css";
 
 const syne = Syne({
@@ -33,8 +34,10 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <ToastProvider>
-            <Header />
-            {children}
+            <MotionProvider>
+              <Header />
+              {children}
+            </MotionProvider>
           </ToastProvider>
         </AuthProvider>
       </body>

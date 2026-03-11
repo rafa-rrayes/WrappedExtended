@@ -1,7 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
 import type { LateNightAnalysis } from "@/types/dashboard";
 import { formatHours } from "@/lib/utils";
+import { SectionReveal } from "./section-reveal";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface LateNightProps {
   data: LateNightAnalysis;
@@ -11,7 +14,7 @@ export function LateNight({ data }: LateNightProps) {
   if (!data) return null;
 
   return (
-    <section id="latenight" className="py-24 opacity-0 animate-[fadeUp_0.8s_ease_forwards]">
+    <SectionReveal id="latenight" className="py-24">
       <div className="mb-12">
         <span className="font-[family-name:var(--font-display)] text-[0.7rem] font-semibold tracking-[0.2em] uppercase text-green mb-2.5 block">
           18 — Late Night Listening
@@ -61,11 +64,17 @@ export function LateNight({ data }: LateNightProps) {
               <div className="text-text-muted text-[0.6rem] uppercase tracking-wider mb-3">
                 Your Late Night Companions
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 gap-2"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
                 {data.top_artists.slice(0, 6).map((a, i) => (
-                  <div
+                  <motion.div
                     key={a.artist_name}
                     className="flex items-center gap-3 p-2.5 bg-white/[0.02] rounded-[var(--radius-sm)]"
+                    variants={staggerItem}
                   >
                     <span
                       className={`font-[family-name:var(--font-display)] text-sm font-bold shrink-0 ${
@@ -78,13 +87,13 @@ export function LateNight({ data }: LateNightProps) {
                     <span className="text-text-muted text-xs ml-auto shrink-0">
                       {formatHours(a.hours)}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
           )}
         </div>
       </div>
-    </section>
+    </SectionReveal>
   );
 }

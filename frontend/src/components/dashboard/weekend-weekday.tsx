@@ -1,7 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
 import type { WeekendVsWeekday as WeekendVsWeekdayType } from "@/types/dashboard";
 import { formatHours, formatNumber } from "@/lib/utils";
+import { SectionReveal } from "./section-reveal";
+import { staggerItem } from "@/lib/animations";
 
 interface WeekendWeekdayProps {
   data: WeekendVsWeekdayType;
@@ -77,7 +80,7 @@ export function WeekendWeekday({ data }: WeekendWeekdayProps) {
   if (!data) return null;
 
   return (
-    <section id="weekend" className="py-24 opacity-0 animate-[fadeUp_0.8s_ease_forwards]">
+    <SectionReveal id="weekend" className="py-24">
       <div className="mb-12">
         <span className="font-[family-name:var(--font-display)] text-[0.7rem] font-semibold tracking-[0.2em] uppercase text-green mb-2.5 block">
           17 — Weekend vs Weekday
@@ -88,24 +91,41 @@ export function WeekendWeekday({ data }: WeekendWeekdayProps) {
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
-        <HalfCard
-          title="Weekdays"
-          hours={data.weekday.hours}
-          streams={data.weekday.streams}
-          topArtists={data.weekday.top_artists}
-          accent="#1DB954"
-        />
+        <motion.div
+          className="flex-1"
+          variants={staggerItem}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10% 0px" }}
+        >
+          <HalfCard
+            title="Weekdays"
+            hours={data.weekday.hours}
+            streams={data.weekday.streams}
+            topArtists={data.weekday.top_artists}
+            accent="#1DB954"
+          />
+        </motion.div>
         <div className="hidden md:flex items-center">
           <div className="w-px h-32 bg-border" />
         </div>
-        <HalfCard
-          title="Weekends"
-          hours={data.weekend.hours}
-          streams={data.weekend.streams}
-          topArtists={data.weekend.top_artists}
-          accent="#F5A623"
-        />
+        <motion.div
+          className="flex-1"
+          variants={staggerItem}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          transition={{ delay: 0.12 }}
+        >
+          <HalfCard
+            title="Weekends"
+            hours={data.weekend.hours}
+            streams={data.weekend.streams}
+            topArtists={data.weekend.top_artists}
+            accent="#F5A623"
+          />
+        </motion.div>
       </div>
-    </section>
+    </SectionReveal>
   );
 }
