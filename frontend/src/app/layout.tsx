@@ -19,9 +19,23 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "WrapEx — Spotify Streaming Dashboard",
+  title: {
+    default: "WrapEx — Your Spotify Listening History, Visualized",
+    template: "%s | WrapEx",
+  },
   description:
-    "Upload your Spotify Extended Streaming History and get comprehensive dashboards with visualizations.",
+    "Upload your Spotify Extended Streaming History and get comprehensive dashboards with detailed visualizations of your listening habits.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://wrapex.app"),
+  openGraph: {
+    type: "website",
+    siteName: "WrapEx",
+    title: "WrapEx — Your Spotify Listening History, Visualized",
+    description:
+      "Upload your Spotify Extended Streaming History and get comprehensive dashboards with detailed visualizations of your listening habits.",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

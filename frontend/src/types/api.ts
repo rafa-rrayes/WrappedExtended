@@ -30,6 +30,7 @@ export interface UserProfile {
   timezone: string;
   max_uploads: number;
   has_paid: boolean;
+  is_staff: boolean;
   upload_count: number;
   created_at: string;
 }

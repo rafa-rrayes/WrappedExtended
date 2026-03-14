@@ -2,6 +2,7 @@
 
 import type { DashboardDetail } from "@/types/dashboard";
 import { SharePanel } from "@/components/dashboard/share-panel";
+import { ExportPanel } from "@/components/dashboard/export-panel";
 import { HeroStats } from "@/components/dashboard/hero-stats";
 import { TopArtistsChart } from "@/components/dashboard/top-artists-chart";
 import { TopTracksTable } from "@/components/dashboard/top-tracks-table";
@@ -64,7 +65,8 @@ export function DashboardContent({
   return (
     <>
       {showSharePanel && (
-        <div className="max-w-[1280px] mx-auto px-6 flex justify-end pt-16">
+        <div className="max-w-[1280px] mx-auto px-6 flex justify-end gap-2 pt-16">
+          <ExportPanel data={data} />
           <SharePanel
             dashboardId={data.id}
             isPublic={data.is_public}
@@ -86,85 +88,107 @@ export function DashboardContent({
         </div>
       )}
 
-      <HeroStats
-        totalHours={timeMachine.active && timeMachine.filteredData ? stats.total_hours : data.total_hours}
-        totalStreams={timeMachine.active && timeMachine.filteredData ? stats.total_streams : data.total_streams}
-        uniqueArtists={timeMachine.active && timeMachine.filteredData ? stats.unique_artists : data.unique_artists}
-        uniqueTracks={timeMachine.active && timeMachine.filteredData ? stats.unique_tracks : data.unique_tracks}
-        dateRangeStart={data.date_range_start}
-        dateRangeEnd={data.date_range_end}
-      />
-      <div className="max-w-[1280px] mx-auto px-6 pb-20">
-        <TopArtistsChart artists={stats.top_artists ?? []} />
-        <TopTracksTable tracks={stats.top_tracks ?? []} />
-        <TopAlbums albums={stats.top_albums ?? []} />
-        <ListeningTimeline
-          monthlyHours={stats.monthly_hours ?? []}
-          yearlyStats={stats.yearly_stats}
-        />
-        <YearOverYear data={stats.year_over_year ?? []} />
-        <WhenYouListen
-          hourlyDistribution={stats.hourly_distribution ?? []}
-          weekdayDistribution={stats.weekday_distribution ?? []}
-          dailyActivity={stats.daily_activity_pattern}
-          seasonalPatterns={stats.seasonal_patterns}
-        />
-        <HourDayHeatmap data={stats.hour_day_heatmap ?? []} />
-        <CalendarHeatmap data={stats.calendar_heatmap ?? []} />
-        <ArtistDiscoveryTimeline data={stats.artist_discovery_timeline ?? []} />
-        <SongObsession data={stats.song_monthly_breakdown ?? []} />
-        <ListeningHabits
-          shufflePct={stats.shuffle_pct}
-          skipPct={stats.skip_pct}
-          offlinePct={stats.offline_pct}
-          incognitoPct={stats.incognito_pct}
-          completion={stats.completion_distribution}
-          streaks={stats.listening_streaks}
-        />
-        <PlatformBreakdown
-          platformHours={stats.platform_hours}
-          contentTypes={stats.content_type_distribution}
-        />
-        <SkipAnalysis
-          skipRateByArtist={stats.skip_rate_by_artist}
-          skipRateScatter={stats.skip_rate_scatter}
-          completionRates={stats.track_completion_rates}
-        />
-        <GeographicListening
-          countries={stats.country_distribution}
-          travelMusic={stats.travel_music}
-        />
-        <NostalgiaDiscovery
-          nostalgiaTracks={stats.nostalgia_tracks}
-          discoveryRate={stats.discovery_rate}
-          musicLifecycle={stats.music_lifecycle}
-        />
-        <DeepStats
-          summary={stats.statistics_summary}
-          diversity={stats.diversity_score}
-        />
+      <div id="dashboard-content">
+        <div data-section="hero-stats">
+          <HeroStats
+            totalHours={timeMachine.active && timeMachine.filteredData ? stats.total_hours : data.total_hours}
+            totalStreams={timeMachine.active && timeMachine.filteredData ? stats.total_streams : data.total_streams}
+            uniqueArtists={timeMachine.active && timeMachine.filteredData ? stats.unique_artists : data.unique_artists}
+            uniqueTracks={timeMachine.active && timeMachine.filteredData ? stats.unique_tracks : data.unique_tracks}
+            dateRangeStart={data.date_range_start}
+            dateRangeEnd={data.date_range_end}
+          />
+        </div>
+        <div className="max-w-[1280px] mx-auto px-6 pb-20">
+          <div data-section="top-artists"><TopArtistsChart artists={stats.top_artists ?? []} /></div>
+          <div data-section="top-tracks"><TopTracksTable tracks={stats.top_tracks ?? []} /></div>
+          <div data-section="top-albums"><TopAlbums albums={stats.top_albums ?? []} /></div>
+          <div data-section="listening-timeline">
+            <ListeningTimeline
+              monthlyHours={stats.monthly_hours ?? []}
+              yearlyStats={stats.yearly_stats}
+            />
+          </div>
+          <div data-section="year-over-year"><YearOverYear data={stats.year_over_year ?? []} /></div>
+          <div data-section="when-you-listen">
+            <WhenYouListen
+              hourlyDistribution={stats.hourly_distribution ?? []}
+              weekdayDistribution={stats.weekday_distribution ?? []}
+              dailyActivity={stats.daily_activity_pattern}
+              seasonalPatterns={stats.seasonal_patterns}
+            />
+          </div>
+          <div data-section="hour-day-heatmap"><HourDayHeatmap data={stats.hour_day_heatmap ?? []} /></div>
+          <div data-section="calendar-heatmap"><CalendarHeatmap data={stats.calendar_heatmap ?? []} /></div>
+          <div data-section="artist-discovery"><ArtistDiscoveryTimeline data={stats.artist_discovery_timeline ?? []} /></div>
+          <div data-section="song-obsession"><SongObsession data={stats.song_monthly_breakdown ?? []} /></div>
+          <div data-section="listening-habits">
+            <ListeningHabits
+              shufflePct={stats.shuffle_pct}
+              skipPct={stats.skip_pct}
+              offlinePct={stats.offline_pct}
+              incognitoPct={stats.incognito_pct}
+              completion={stats.completion_distribution}
+              streaks={stats.listening_streaks}
+            />
+          </div>
+          <div data-section="platform-breakdown">
+            <PlatformBreakdown
+              platformHours={stats.platform_hours}
+              contentTypes={stats.content_type_distribution}
+            />
+          </div>
+          <div data-section="skip-analysis">
+            <SkipAnalysis
+              skipRateByArtist={stats.skip_rate_by_artist}
+              skipRateScatter={stats.skip_rate_scatter}
+              completionRates={stats.track_completion_rates}
+            />
+          </div>
+          <div data-section="geographic">
+            <GeographicListening
+              countries={stats.country_distribution}
+              travelMusic={stats.travel_music}
+            />
+          </div>
+          <div data-section="nostalgia">
+            <NostalgiaDiscovery
+              nostalgiaTracks={stats.nostalgia_tracks}
+              discoveryRate={stats.discovery_rate}
+              musicLifecycle={stats.music_lifecycle}
+            />
+          </div>
+          <div data-section="deep-stats">
+            <DeepStats
+              summary={stats.statistics_summary}
+              diversity={stats.diversity_score}
+            />
+          </div>
+          <div data-section="personality"><PersonalityProfile data={stats} /></div>
+          <div data-section="achievements"><AchievementsGrid data={stats} /></div>
 
-        {/* New sections */}
-        <PersonalityProfile data={stats} />
-        <AchievementsGrid data={stats} />
+          {stats.mood_timeline && stats.mood_timeline.length > 0 && (
+            <div data-section="mood-timeline"><MoodTimeline data={stats.mood_timeline} /></div>
+          )}
 
-        {stats.mood_timeline && stats.mood_timeline.length > 0 && (
-          <MoodTimeline data={stats.mood_timeline} />
-        )}
+          {isAuthenticated && (
+            <div data-section="social-benchmarks"><SocialBenchmarks dashboardId={data.id} /></div>
+          )}
 
-        {isAuthenticated && <SocialBenchmarks dashboardId={data.id} />}
-
-        {stats.weekend_vs_weekday && (
-          <WeekendWeekday data={stats.weekend_vs_weekday} />
-        )}
-        {stats.late_night_analysis && (
-          <LateNight data={stats.late_night_analysis} />
-        )}
-        <BarChartRace
-          artistMonthHeatmap={stats.artist_month_heatmap}
-          songMonthlyBreakdown={stats.song_monthly_breakdown}
-        />
-        <YourWrapped data={stats.wrapped_summaries ?? {}} />
+          {stats.weekend_vs_weekday && (
+            <div data-section="weekend-weekday"><WeekendWeekday data={stats.weekend_vs_weekday} /></div>
+          )}
+          {stats.late_night_analysis && (
+            <div data-section="late-night"><LateNight data={stats.late_night_analysis} /></div>
+          )}
+          <div data-section="bar-chart-race">
+            <BarChartRace
+              artistMonthHeatmap={stats.artist_month_heatmap}
+              songMonthlyBreakdown={stats.song_monthly_breakdown}
+            />
+          </div>
+          <div data-section="your-wrapped"><YourWrapped data={stats.wrapped_summaries ?? {}} /></div>
+        </div>
       </div>
 
       {/* Interactive feature overlays — authenticated only */}

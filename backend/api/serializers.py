@@ -47,15 +47,16 @@ class ChangePasswordSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
     upload_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
         fields = (
             "username", "email", "display_name", "timezone",
-            "max_uploads", "has_paid", "upload_count", "created_at",
+            "max_uploads", "has_paid", "is_staff", "upload_count", "created_at",
         )
-        read_only_fields = ("max_uploads", "has_paid", "upload_count", "created_at")
+        read_only_fields = ("max_uploads", "has_paid", "is_staff", "upload_count", "created_at")
 
     def get_upload_count(self, obj: UserProfile) -> int:
         return Upload.objects.filter(user=obj.user).count()

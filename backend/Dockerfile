@@ -9,14 +9,16 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Install dependencies
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --no-install-project
 
 # Copy project
 COPY . .
 
-# Collect static files
-RUN uv run python manage.py collectstatic --noinput 2>/dev/null || true
+# Collect static files at build time (dummy secrets — only Django's staticfiles engine runs)
+RUN DJANGO_SECRET_KEY=build-placeholder \
+    STRIPE_SECRET_KEY=x STRIPE_PUBLISHABLE_KEY=x STRIPE_PRICE_ID=x STRIPE_WEBHOOK_SECRET=x \
+    uv run python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

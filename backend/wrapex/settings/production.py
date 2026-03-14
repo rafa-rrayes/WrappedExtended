@@ -1,8 +1,18 @@
 """Production settings."""
 
+import sentry_sdk
 from decouple import Csv, config
 
 from .base import *  # noqa: F401, F403
+
+# Sentry
+SENTRY_DSN = config("SENTRY_DSN", default="")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+    )
 
 DEBUG = False
 

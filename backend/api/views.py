@@ -1,12 +1,19 @@
+from datetime import timedelta
+from itertools import chain
+
 import stripe
 from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count, Q, Sum
+from django.db.models.functions import TruncDate, TruncWeek
 from django.http import HttpResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from processing.tasks import process_upload
 from storage.client import delete_file_from_s3, upload_file_to_s3
@@ -254,6 +261,10 @@ def stripe_webhook(request):
         except Payment.DoesNotExist:
             return HttpResponse(status=200)
 
+        # Idempotency: skip if already processed
+        if payment.status == Payment.Status.COMPLETED:
+            return HttpResponse(status=200)
+
         # Mark payment as completed
         payment.status = Payment.Status.COMPLETED
         payment_intent_id = session.get("payment_intent", "")
@@ -361,3 +372,224 @@ def create_billing_portal_session(request):
         )
 
     return Response({"url": session.url})
+
+
+# ─── Admin Analytics ──────────────────────────────────────────────────────────
+
+
+class AdminAnalyticsView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    RANGE_MAP = {
+        "7d": 7,
+        "30d": 30,
+        "90d": 90,
+    }
+
+    def get(self, request):
+        range_param = request.query_params.get("range", "30d")
+        days = self.RANGE_MAP.get(range_param)
+        now = timezone.now()
+
+        # Date filter
+        if days:
+            start_date = now - timedelta(days=days)
+            date_filter = Q(created_at__gte=start_date)
+            joined_filter = Q(date_joined__gte=start_date)
+        else:
+            start_date = None
+            date_filter = Q()
+            joined_filter = Q()
+
+        # Use weekly buckets for ranges > 90 days
+        trunc_fn = TruncWeek if range_param == "all" else TruncDate
+
+        # ── KPIs ──
+        total_revenue = Payment.objects.filter(
+            status=Payment.Status.COMPLETED
+        ).aggregate(total=Sum("amount_cents"))["total"] or 0
+
+        period_revenue = Payment.objects.filter(
+            status=Payment.Status.COMPLETED
+        ).filter(date_filter).aggregate(total=Sum("amount_cents"))["total"] or 0
+
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_revenue = Payment.objects.filter(
+            status=Payment.Status.COMPLETED, created_at__gte=today_start
+        ).aggregate(total=Sum("amount_cents"))["total"] or 0
+
+        total_users = User.objects.count()
+        period_new_users = User.objects.filter(joined_filter).count()
+        active_users_30d = Upload.objects.filter(
+            created_at__gte=now - timedelta(days=30)
+        ).values("user").distinct().count()
+
+        total_uploads = Upload.objects.count()
+        period_uploads = Upload.objects.filter(date_filter).count()
+
+        completed_uploads = Upload.objects.filter(status=Upload.Status.COMPLETED).count()
+        success_rate = (completed_uploads / total_uploads * 100) if total_uploads > 0 else 0.0
+
+        total_storage = Upload.objects.aggregate(total=Sum("file_size_bytes"))["total"] or 0
+        total_dashboards = ProcessedDashboard.objects.count()
+        paid_users = UserProfile.objects.filter(has_paid=True).count()
+        conversion_rate = (paid_users / total_users * 100) if total_users > 0 else 0.0
+
+        kpis = {
+            "total_revenue_cents": total_revenue,
+            "period_revenue_cents": period_revenue,
+            "today_revenue_cents": today_revenue,
+            "total_users": total_users,
+            "period_new_users": period_new_users,
+            "active_users_30d": active_users_30d,
+            "total_uploads": total_uploads,
+            "period_uploads": period_uploads,
+            "success_rate": round(success_rate, 1),
+            "total_storage_bytes": total_storage,
+            "total_dashboards": total_dashboards,
+            "paid_users": paid_users,
+            "conversion_rate": round(conversion_rate, 1),
+        }
+
+        # ── Revenue series ──
+        revenue_qs = (
+            Payment.objects.filter(status=Payment.Status.COMPLETED)
+            .filter(date_filter)
+            .annotate(date=trunc_fn("created_at"))
+            .values("date")
+            .annotate(amount_cents=Sum("amount_cents"))
+            .order_by("date")
+        )
+        revenue_series = []
+        cumulative = 0
+        for row in revenue_qs:
+            cumulative += row["amount_cents"]
+            revenue_series.append({
+                "date": row["date"].strftime("%Y-%m-%d"),
+                "amount_cents": row["amount_cents"],
+                "cumulative_cents": cumulative,
+            })
+
+        # ── User growth series ──
+        user_qs = (
+            User.objects.filter(joined_filter)
+            .annotate(date=trunc_fn("date_joined"))
+            .values("date")
+            .annotate(count=Count("id"))
+            .order_by("date")
+        )
+        user_growth_series = []
+        cumulative = 0
+        for row in user_qs:
+            cumulative += row["count"]
+            user_growth_series.append({
+                "date": row["date"].strftime("%Y-%m-%d"),
+                "new_users": row["count"],
+                "cumulative_users": cumulative,
+            })
+
+        # ── Upload series ──
+        upload_qs = (
+            Upload.objects.filter(date_filter)
+            .annotate(date=trunc_fn("created_at"))
+            .values("date")
+            .annotate(
+                total=Count("id"),
+                completed=Count("id", filter=Q(status=Upload.Status.COMPLETED)),
+                failed=Count("id", filter=Q(status=Upload.Status.FAILED)),
+            )
+            .order_by("date")
+        )
+        upload_series = [
+            {
+                "date": row["date"].strftime("%Y-%m-%d"),
+                "total": row["total"],
+                "completed": row["completed"],
+                "failed": row["failed"],
+            }
+            for row in upload_qs
+        ]
+
+        # ── Upload funnel ──
+        funnel_qs = (
+            Upload.objects.filter(date_filter)
+            .values("status")
+            .annotate(count=Count("id"))
+        )
+        upload_funnel = {
+            "pending_payment": 0, "pending": 0, "validating": 0,
+            "processing": 0, "completed": 0, "failed": 0,
+        }
+        for row in funnel_qs:
+            upload_funnel[row["status"]] = row["count"]
+
+        # ── Platform insights ──
+        insights = ProcessedDashboard.objects.aggregate(
+            avg_total_hours=Avg("total_hours"),
+            avg_total_streams=Avg("total_streams"),
+            avg_unique_artists=Avg("unique_artists"),
+            avg_unique_tracks=Avg("unique_tracks"),
+        )
+        platform_insights = {
+            "avg_total_hours": round(insights["avg_total_hours"] or 0, 1),
+            "avg_total_streams": round(insights["avg_total_streams"] or 0, 1),
+            "avg_unique_artists": round(insights["avg_unique_artists"] or 0, 1),
+            "avg_unique_tracks": round(insights["avg_unique_tracks"] or 0, 1),
+            "total_public_dashboards": ProcessedDashboard.objects.filter(is_public=True).count(),
+        }
+
+        # ── Recent activity ──
+        recent_uploads = list(
+            Upload.objects.select_related("user")
+            .order_by("-created_at")[:20]
+            .values_list("created_at", "user__username", "original_filename", "status")
+        )
+        recent_payments = list(
+            Payment.objects.filter(status=Payment.Status.COMPLETED)
+            .select_related("user")
+            .order_by("-created_at")[:20]
+            .values_list("created_at", "user__username", "amount_cents", "status")
+        )
+        recent_registrations = list(
+            User.objects.order_by("-date_joined")[:20]
+            .values_list("date_joined", "username")
+        )
+
+        activity = []
+        for created_at, username, filename, upload_status in recent_uploads:
+            activity.append({
+                "type": "upload",
+                "user": username,
+                "detail": filename,
+                "status": upload_status,
+                "created_at": created_at.isoformat(),
+            })
+        for created_at, username, amount, pay_status in recent_payments:
+            activity.append({
+                "type": "payment",
+                "user": username,
+                "detail": f"${amount / 100:.2f}",
+                "status": pay_status,
+                "created_at": created_at.isoformat(),
+            })
+        for joined, username in recent_registrations:
+            activity.append({
+                "type": "registration",
+                "user": username,
+                "detail": "New account",
+                "status": None,
+                "created_at": joined.isoformat(),
+            })
+
+        activity.sort(key=lambda x: x["created_at"], reverse=True)
+        recent_activity = activity[:20]
+
+        return Response({
+            "kpis": kpis,
+            "revenue_series": revenue_series,
+            "user_growth_series": user_growth_series,
+            "upload_series": upload_series,
+            "upload_funnel": upload_funnel,
+            "platform_insights": platform_insights,
+            "recent_activity": recent_activity,
+        })

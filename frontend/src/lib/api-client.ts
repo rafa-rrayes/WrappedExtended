@@ -1,4 +1,5 @@
 import type { TokenPair, Upload, UploadStatus, UserProfile, Payment } from "@/types/api";
+import type { AdminAnalytics, AnalyticsRange } from "@/types/admin";
 import type { DashboardDetail, DashboardSummary } from "@/types/dashboard";
 import { API_BASE_URL } from "./constants";
 
@@ -227,6 +228,11 @@ export const apiClient = {
 
   async getBenchmarks(dashboardId: string) {
     const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/benchmarks/`);
+    return res.json();
+  },
+
+  async getAdminAnalytics(range: AnalyticsRange = "30d"): Promise<AdminAnalytics> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/admin/analytics/?range=${range}`);
     return res.json();
   },
 

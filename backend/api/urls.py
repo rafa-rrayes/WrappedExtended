@@ -20,6 +20,8 @@ urlpatterns = [
     path("payments/", views.PaymentListView.as_view(), name="payment-list"),
     path("payments/webhook/", views.stripe_webhook, name="stripe-webhook"),
     path("payments/billing-portal/", views.create_billing_portal_session, name="billing-portal"),
+    # Admin
+    path("admin/analytics/", views.AdminAnalyticsView.as_view(), name="admin-analytics"),
     # Uploads
     path("uploads/", views.UploadCreateView.as_view(), name="upload-create"),
     path("uploads/list/", views.UploadListView.as_view(), name="upload-list"),
