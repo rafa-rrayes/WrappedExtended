@@ -140,8 +140,8 @@ const FAQS = [
     a: "Yes! Every dashboard has a shareable public link you can send to friends or post on social media.",
   },
   {
-    q: "Why $5?",
-    a: "Running the infrastructure to process and host your dashboard costs real money. $5 keeps WrapEx sustainable without ads or selling your data. One payment, your dashboard stays forever.",
+    q: "Why $10?",
+    a: "Running the infrastructure to process and host your dashboard costs real money. $10 keeps WrapEx sustainable without ads or selling your data. One payment, your dashboard stays forever.",
   },
 ];
 
@@ -324,7 +324,7 @@ export default function LandingPage() {
               </span>
               <div className="mb-6">
                 <span className="font-[family-name:var(--font-display)] text-6xl font-extrabold text-text-primary">
-                  $5
+                  $10
                 </span>
                 <span className="text-text-muted ml-2">per dashboard</span>
               </div>
@@ -422,7 +422,7 @@ export default function LandingPage() {
             href="/upload"
             className="bg-green hover:bg-green/90 text-bg-deep font-semibold px-10 py-3.5 rounded-full transition-all text-lg"
           >
-            Get Started &mdash; $5
+            Get Started &mdash; $10
           </Link>
         </FadeUp>
       </section>

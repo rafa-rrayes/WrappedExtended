@@ -199,7 +199,7 @@ export default function HowItWorksPage() {
             href="/upload"
             className="bg-green hover:bg-green/90 text-bg-deep font-semibold px-10 py-3.5 rounded-full transition-all text-lg"
           >
-            Get Started &mdash; $5
+            Get Started &mdash; $10
           </Link>
         </FadeUp>
       </section>

@@ -144,7 +144,7 @@ function UploadContent() {
           disabled={!file || uploading}
           className="mt-6 w-full bg-green hover:bg-green/90 text-bg-deep font-semibold py-3 rounded-[var(--radius-sm)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {uploading ? "Uploading..." : hasPaid ? "Upload" : "Upload & Pay $5"}
+          {uploading ? "Uploading..." : hasPaid ? "Upload" : "Upload & Pay $10"}
         </button>
 
         {/* Instructions */}

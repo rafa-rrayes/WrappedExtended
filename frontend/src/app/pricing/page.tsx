@@ -103,7 +103,7 @@ export default function PricingPage() {
             One dashboard. One price.
           </h1>
           <p className="text-lg text-text-secondary font-light max-w-lg mx-auto">
-            No subscriptions, no tiers, no upsells. Pay $5 and get your complete listening dashboard forever.
+            No subscriptions, no tiers, no upsells. Pay $10 and get your complete listening dashboard forever.
           </p>
         </FadeUp>
       </section>
@@ -116,7 +116,7 @@ export default function PricingPage() {
             <div className="relative bg-bg-card border border-green/20 rounded-[var(--radius-card)] p-10 text-center">
               <div className="mb-2">
                 <span className="font-[family-name:var(--font-display)] text-7xl font-extrabold text-text-primary">
-                  $5
+                  $10
                 </span>
               </div>
               <p className="text-text-muted mb-8">
@@ -201,11 +201,11 @@ export default function PricingPage() {
         </FadeUp>
       </section>
 
-      {/* Why $5 */}
+      {/* Why $10 */}
       <section className="max-w-[720px] mx-auto px-6 py-24">
         <FadeUp>
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold text-center mb-4">
-            Why $5?
+            Why $10?
           </h2>
         </FadeUp>
 
@@ -215,7 +215,7 @@ export default function PricingPage() {
               WrapEx runs real infrastructure &mdash; servers to process your data, storage to host your dashboard, and bandwidth to serve it to anyone you share it with.
             </p>
             <p>
-              $5 covers the cost of processing your streaming history (which can span years of data), generating all the visualizations, and keeping your dashboard online permanently.
+              $10 covers the cost of processing your streaming history (which can span years of data), generating all the visualizations, and keeping your dashboard online permanently.
             </p>
             <p>
               There are no ads, no tracking, and we never sell your data. The price is the product, and the product is your dashboard.
@@ -238,7 +238,7 @@ export default function PricingPage() {
             href="/upload"
             className="bg-green hover:bg-green/90 text-bg-deep font-semibold px-10 py-3.5 rounded-full transition-all text-lg"
           >
-            Get Started &mdash; $5
+            Get Started &mdash; $10
           </Link>
         </FadeUp>
       </section>
