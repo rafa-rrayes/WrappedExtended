@@ -14,8 +14,12 @@ urlpatterns = [
     path("auth/me/", views.MeView.as_view(), name="me"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
     path("auth/password/change/", views.ChangePasswordView.as_view(), name="password-change"),
+    # Account
+    path("auth/account/", views.DeleteAccountView.as_view(), name="account-delete"),
     # Payments
+    path("payments/", views.PaymentListView.as_view(), name="payment-list"),
     path("payments/webhook/", views.stripe_webhook, name="stripe-webhook"),
+    path("payments/billing-portal/", views.create_billing_portal_session, name="billing-portal"),
     # Uploads
     path("uploads/", views.UploadCreateView.as_view(), name="upload-create"),
     path("uploads/list/", views.UploadListView.as_view(), name="upload-list"),

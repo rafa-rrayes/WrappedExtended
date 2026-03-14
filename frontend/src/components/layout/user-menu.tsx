@@ -54,6 +54,13 @@ export function UserMenu() {
               My Dashboards
             </Link>
             <Link
+              href="/account"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+            >
+              My Account
+            </Link>
+            <Link
               href="/settings"
               onClick={() => setOpen(false)}
               className="block px-4 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"

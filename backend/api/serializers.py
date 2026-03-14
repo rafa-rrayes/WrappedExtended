@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import ProcessedDashboard, Upload, UserProfile
+from .models import Payment, ProcessedDashboard, Upload, UserProfile
 
 User = get_user_model()
 
@@ -47,11 +47,28 @@ class ChangePasswordSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    upload_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
-        fields = ("username", "email", "display_name", "timezone", "max_uploads", "created_at")
-        read_only_fields = ("max_uploads", "created_at")
+        fields = (
+            "username", "email", "display_name", "timezone",
+            "max_uploads", "has_paid", "upload_count", "created_at",
+        )
+        read_only_fields = ("max_uploads", "has_paid", "upload_count", "created_at")
+
+    def get_upload_count(self, obj: UserProfile) -> int:
+        return Upload.objects.filter(user=obj.user).count()
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = (
+            "id", "amount_cents", "currency", "status",
+            "stripe_payment_intent_id", "receipt_url", "created_at",
+        )
+        read_only_fields = fields
 
 
 class UploadSerializer(serializers.ModelSerializer):

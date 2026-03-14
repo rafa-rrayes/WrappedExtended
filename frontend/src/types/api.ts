@@ -29,5 +29,17 @@ export interface UserProfile {
   display_name: string;
   timezone: string;
   max_uploads: number;
+  has_paid: boolean;
+  upload_count: number;
+  created_at: string;
+}
+
+export interface Payment {
+  id: string;
+  amount_cents: number;
+  currency: string;
+  status: "pending" | "completed" | "failed";
+  stripe_payment_intent_id: string;
+  receipt_url: string;
   created_at: string;
 }

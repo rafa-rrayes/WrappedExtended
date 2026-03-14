@@ -12,6 +12,11 @@ function UploadContent() {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState("");
+  const [hasPaid, setHasPaid] = useState(false);
+
+  useEffect(() => {
+    apiClient.getMe().then((profile) => setHasPaid(profile.has_paid)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("payment") === "cancelled") {
@@ -52,11 +57,11 @@ function UploadContent() {
     setUploading(true);
     try {
       const result = await apiClient.uploadFile(file);
-      if (result.checkout_url) {
-        // Redirect to Stripe Checkout
+      if (result.checkout_url && !hasPaid) {
+        // First-time payment — redirect to Stripe Checkout
         window.location.href = result.checkout_url;
       } else {
-        // Fallback: go to processing page
+        // Already paid — go straight to processing
         router.push(`/processing/${result.id}`);
       }
     } catch {
@@ -139,7 +144,7 @@ function UploadContent() {
           disabled={!file || uploading}
           className="mt-6 w-full bg-green hover:bg-green/90 text-bg-deep font-semibold py-3 rounded-[var(--radius-sm)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {uploading ? "Uploading..." : "Upload & Pay $5"}
+          {uploading ? "Uploading..." : hasPaid ? "Upload" : "Upload & Pay $5"}
         </button>
 
         {/* Instructions */}

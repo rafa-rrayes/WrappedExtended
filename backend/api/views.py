@@ -17,6 +17,7 @@ from .serializers import (
     DashboardDetailSerializer,
     DashboardSummarySerializer,
     LogoutSerializer,
+    PaymentSerializer,
     RegisterSerializer,
     UploadSerializer,
     UploadStatusSerializer,
@@ -26,6 +27,16 @@ from .serializers import (
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
 
 User = get_user_model()
+
+
+def get_or_create_stripe_customer(user):
+    profile = UserProfile.objects.get(user=user)
+    if profile.stripe_customer_id:
+        return profile.stripe_customer_id
+    customer = stripe.Customer.create(email=user.email, metadata={"user_id": str(user.id)})
+    profile.stripe_customer_id = customer.id
+    profile.save(update_fields=["stripe_customer_id"])
+    return customer.id
 
 
 # ─── Auth ──────────────────────────────────────────────────────────────────────
@@ -98,7 +109,23 @@ class UploadCreateView(generics.CreateAPIView):
         file_key = f"uploads/{request.user.id}/{file.name}"
         upload_file_to_s3(file, file_key)
 
-        # Create Upload record — don't process until paid
+        # Superusers and users who already paid skip Stripe
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        if profile.has_paid or request.user.is_superuser:
+            # Already paid — skip Stripe checkout, start processing immediately
+            upload = Upload.objects.create(
+                user=request.user,
+                file_key=file_key,
+                original_filename=file.name,
+                file_size_bytes=file.size,
+                status=Upload.Status.PENDING,
+            )
+            task = process_upload.delay(str(upload.id))
+            upload.celery_task_id = task.id
+            upload.save(update_fields=["celery_task_id"])
+            return Response(UploadSerializer(upload).data, status=status.HTTP_201_CREATED)
+
+        # First-time payment — create upload in pending_payment state
         upload = Upload.objects.create(
             user=request.user,
             file_key=file_key,
@@ -111,9 +138,10 @@ class UploadCreateView(generics.CreateAPIView):
         frontend_url = django_settings.FRONTEND_URL
         try:
             checkout_session = stripe.checkout.Session.create(
+                customer=get_or_create_stripe_customer(request.user),
                 line_items=[{"price": django_settings.STRIPE_PRICE_ID, "quantity": 1}],
                 mode="payment",
-                success_url=f"{frontend_url}/processing/{upload.id}?payment=success",
+                success_url=f"{frontend_url}/payment/success?upload_id={upload.id}",
                 cancel_url=f"{frontend_url}/upload?payment=cancelled",
                 metadata={"upload_id": str(upload.id), "user_id": str(request.user.id)},
             )
@@ -228,8 +256,33 @@ def stripe_webhook(request):
 
         # Mark payment as completed
         payment.status = Payment.Status.COMPLETED
-        payment.stripe_payment_intent_id = session.get("payment_intent", "")
-        payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+        payment_intent_id = session.get("payment_intent", "")
+        payment.stripe_payment_intent_id = payment_intent_id
+
+        # Retrieve receipt URL from the charge
+        receipt_url = ""
+        if payment_intent_id:
+            try:
+                pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+                if pi.latest_charge:
+                    charge = stripe.Charge.retrieve(pi.latest_charge)
+                    receipt_url = charge.receipt_url or ""
+            except stripe.StripeError:
+                pass
+        payment.receipt_url = receipt_url
+        payment.save(update_fields=["status", "stripe_payment_intent_id", "receipt_url", "updated_at"])
+
+        # Mark user as paid (one-time unlock) and backfill stripe_customer_id
+        profile, _ = UserProfile.objects.get_or_create(user=payment.user)
+        update_fields = ["updated_at"]
+        if not profile.has_paid:
+            profile.has_paid = True
+            update_fields.append("has_paid")
+        customer_id = session.get("customer", "")
+        if customer_id and not profile.stripe_customer_id:
+            profile.stripe_customer_id = customer_id
+            update_fields.append("stripe_customer_id")
+        profile.save(update_fields=update_fields)
 
         # Start processing
         upload = payment.upload
@@ -241,3 +294,70 @@ def stripe_webhook(request):
         upload.save(update_fields=["celery_task_id"])
 
     return HttpResponse(status=200)
+
+
+# ─── Payments ────────────────────────────────────────────────────────────────
+
+
+class PaymentListView(generics.ListAPIView):
+    serializer_class = PaymentSerializer
+
+    def get_queryset(self):
+        return Payment.objects.filter(user=self.request.user).order_by("-created_at")
+
+
+# ─── Account Deletion ────────────────────────────────────────────────────────
+
+
+class DeleteAccountView(generics.GenericAPIView):
+    def delete(self, request):
+        user = request.user
+
+        # Delete S3 files for all uploads
+        for upload in Upload.objects.filter(user=user):
+            try:
+                delete_file_from_s3(upload.file_key)
+            except Exception:
+                pass
+
+        # Delete parquet files for dashboards
+        for dashboard in ProcessedDashboard.objects.filter(user=user):
+            if dashboard.parquet_key:
+                try:
+                    delete_file_from_s3(dashboard.parquet_key)
+                except Exception:
+                    pass
+
+        # Delete user — CASCADE handles related objects
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Billing Portal ──────────────────────────────────────────────────────────
+
+
+@api_view(["POST"])
+def create_billing_portal_session(request):
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if not profile.stripe_customer_id:
+        return Response(
+            {"detail": "No billing history found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=profile.stripe_customer_id,
+            return_url=f"{django_settings.FRONTEND_URL}/settings",
+        )
+    except stripe.StripeError as e:
+        return Response(
+            {"detail": f"Failed to create billing portal session: {e}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    return Response({"url": session.url})

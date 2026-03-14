@@ -25,6 +25,7 @@ import { YourWrapped } from "@/components/dashboard/your-wrapped";
 import { PersonalityProfile } from "@/components/dashboard/personality-profile";
 import { AchievementsGrid } from "@/components/dashboard/achievements-grid";
 import { MoodTimeline } from "@/components/dashboard/mood-timeline";
+import { BarChartRace } from "@/components/dashboard/bar-chart-race";
 import { SocialBenchmarks } from "@/components/dashboard/social-benchmarks";
 import { SearchBar } from "@/components/dashboard/search/search-bar";
 import { ChartBuilderModal } from "@/components/dashboard/chart-builder/chart-builder-modal";
@@ -159,6 +160,10 @@ export function DashboardContent({
         {stats.late_night_analysis && (
           <LateNight data={stats.late_night_analysis} />
         )}
+        <BarChartRace
+          artistMonthHeatmap={stats.artist_month_heatmap}
+          songMonthlyBreakdown={stats.song_monthly_breakdown}
+        />
         <YourWrapped data={stats.wrapped_summaries ?? {}} />
       </div>
 

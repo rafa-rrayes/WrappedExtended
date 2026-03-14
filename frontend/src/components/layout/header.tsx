@@ -21,6 +21,18 @@ export function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-text-secondary">
           <Link
+            href="/demo"
+            className="hover:text-text-primary transition-colors"
+          >
+            Demo
+          </Link>
+          <Link
+            href="/pricing"
+            className="hover:text-text-primary transition-colors"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/upload"
             className="hover:text-text-primary transition-colors"
           >

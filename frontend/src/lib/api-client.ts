@@ -1,4 +1,4 @@
-import type { TokenPair, Upload, UploadStatus, UserProfile } from "@/types/api";
+import type { TokenPair, Upload, UploadStatus, UserProfile, Payment } from "@/types/api";
 import type { DashboardDetail, DashboardSummary } from "@/types/dashboard";
 import { API_BASE_URL } from "./constants";
 
@@ -146,6 +146,30 @@ export const apiClient = {
   async getPublicDashboard(slug: string): Promise<DashboardDetail> {
     const res = await fetch(`${API_BASE_URL}/dashboards/shared/${slug}/`);
     if (!res.ok) throw new Error("Dashboard not found");
+    return res.json();
+  },
+
+  // ── Payments & Account ────────────────────────────────────────────────
+
+  async getPayments(): Promise<Payment[]> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/payments/`);
+    const data = await res.json();
+    return data.results ?? data;
+  },
+
+  async deleteAccount(): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/auth/account/`, {
+      method: "DELETE",
+    });
+  },
+
+  // ── Billing ────────────────────────────────────────────────────────────
+
+  async createBillingPortalSession(): Promise<{ url: string }> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/payments/billing-portal/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
     return res.json();
   },
 

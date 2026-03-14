@@ -32,6 +32,8 @@ function SettingsContent() {
   const [timezone, setTimezone] = useState(user?.timezone ?? "UTC");
   const [savingProfile, setSavingProfile] = useState(false);
 
+  const [billingLoading, setBillingLoading] = useState(false);
+
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -114,6 +116,34 @@ function SettingsContent() {
           </button>
         </div>
       </section>
+
+      {/* Billing */}
+      {user?.has_paid && (
+        <section className="bg-bg-card/60 border border-border rounded-[var(--radius-card)] p-6">
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-lg mb-4">
+            Billing
+          </h2>
+          <p className="text-sm text-text-secondary mb-4">
+            Manage your payment methods, view invoices, and update billing details through the Stripe Customer Portal.
+          </p>
+          <button
+            onClick={async () => {
+              setBillingLoading(true);
+              try {
+                const { url } = await apiClient.createBillingPortalSession();
+                window.location.href = url;
+              } catch {
+                toast("Failed to open billing portal.", "error");
+                setBillingLoading(false);
+              }
+            }}
+            disabled={billingLoading}
+            className="bg-green hover:bg-green/90 text-bg-deep font-semibold text-sm px-6 py-2.5 rounded-[var(--radius-sm)] transition-all disabled:opacity-50"
+          >
+            {billingLoading ? "Redirecting..." : "Manage Billing"}
+          </button>
+        </section>
+      )}
 
       {/* Security */}
       <section className="bg-bg-card/60 border border-border rounded-[var(--radius-card)] p-6">

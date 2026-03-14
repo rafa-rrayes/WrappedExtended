@@ -9,6 +9,8 @@ class UserProfile(models.Model):
     display_name = models.CharField(max_length=100, blank=True)
     timezone = models.CharField(max_length=50, default="UTC")
     max_uploads = models.PositiveIntegerField(default=5)
+    has_paid = models.BooleanField(default=False, help_text="One-time payment unlocks unlimited uploads")
+    stripe_customer_id = models.CharField(max_length=255, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -83,12 +85,13 @@ class Payment(models.Model):
         FAILED = "failed", "Failed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    upload = models.OneToOneField(Upload, on_delete=models.CASCADE, related_name="payment")
+    upload = models.OneToOneField(Upload, on_delete=models.CASCADE, related_name="payment", null=True, blank=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments"
     )
     stripe_checkout_session_id = models.CharField(max_length=255, unique=True)
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
+    receipt_url = models.URLField(blank=True, default="")
     amount_cents = models.IntegerField(default=500)
     currency = models.CharField(max_length=3, default="usd")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

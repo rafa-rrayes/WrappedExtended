@@ -38,6 +38,20 @@ export function MobileNav() {
         <div className="absolute top-14 left-0 right-0 bg-bg-primary/95 backdrop-blur-xl border-b border-border z-40">
           <nav className="max-w-[1280px] mx-auto px-6 py-4 flex flex-col gap-3">
             <Link
+              href="/demo"
+              onClick={() => setOpen(false)}
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Demo
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={() => setOpen(false)}
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/upload"
               onClick={() => setOpen(false)}
               className="text-sm text-text-secondary hover:text-text-primary transition-colors"
@@ -52,6 +66,13 @@ export function MobileNav() {
                   className="text-sm text-text-secondary hover:text-text-primary transition-colors"
                 >
                   My Dashboards
+                </Link>
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Account
                 </Link>
                 <Link
                   href="/settings"

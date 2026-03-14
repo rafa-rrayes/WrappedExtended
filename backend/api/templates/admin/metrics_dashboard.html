@@ -1,0 +1,88 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Metrics Dashboard{% endblock %}
+{% block content_title %}<h1>Metrics Dashboard</h1>{% endblock %}
+
+{% block content %}
+<style>
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--body-bg, #fff);
+    border: 1px solid var(--hairline-color, #ddd);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .metric-card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--body-quiet-color, #666);
+    margin-bottom: 6px;
+  }
+  .metric-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--body-fg, #333);
+  }
+  .metrics-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: var(--body-fg, #333);
+  }
+</style>
+
+<h2 class="metrics-section-title">Revenue</h2>
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="label">Total Revenue</div>
+    <div class="value">{{ total_revenue }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Today</div>
+    <div class="value">{{ today_revenue }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">This Month</div>
+    <div class="value">{{ month_revenue }}</div>
+  </div>
+</div>
+
+<h2 class="metrics-section-title">Uploads</h2>
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="label">Total Uploads</div>
+    <div class="value">{{ total_uploads }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Today</div>
+    <div class="value">{{ today_uploads }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Success Rate</div>
+    <div class="value">{{ success_rate }}</div>
+  </div>
+</div>
+
+<h2 class="metrics-section-title">Users</h2>
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="label">Total Users</div>
+    <div class="value">{{ total_users }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Active (30d)</div>
+    <div class="value">{{ active_users_30d }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Total Storage</div>
+    <div class="value">{{ total_storage }}</div>
+  </div>
+</div>
+{% endblock %}
