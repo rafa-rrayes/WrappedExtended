@@ -46,6 +46,7 @@ export interface DashboardData {
   // ── Line charts ──────────────────────────────────────────────────────────
   artist_discovery_timeline?: ArtistDiscovery[];
   song_monthly_breakdown?: SongMonthlyBreakdown[];
+  song_daily_breakdown?: SongDailyBreakdown[];
 
   // ── Time patterns ────────────────────────────────────────────────────────
   weekly_hours?: WeeklyHour[];
@@ -65,6 +66,7 @@ export interface DashboardData {
   calendar_heatmap?: CalendarHeatmapEntry[];
   hour_day_heatmap?: HourDayHeatmapEntry[];
   artist_month_heatmap?: ArtistMonthHeatmap[];
+  artist_daily_heatmap?: ArtistDailyHeatmap[];
 
   // ── Scatter plots ────────────────────────────────────────────────────────
   track_popularity_scatter?: TrackPopularityScatter[];
@@ -189,7 +191,7 @@ export interface ArtistDiscovery {
 export interface SongMonthlyBreakdown {
   track_name: string;
   artist_name: string;
-  data: { month: string; plays: number }[];
+  data: { month: string; plays: number; minutes?: number }[];
 }
 
 // ── Time patterns ────────────────────────────────────────────────────────────
@@ -272,7 +274,18 @@ export interface HourDayHeatmapEntry {
 
 export interface ArtistMonthHeatmap {
   artist_name: string;
-  data: { month: string; hours: number }[];
+  data: { month: string; hours: number; minutes?: number }[];
+}
+
+export interface ArtistDailyHeatmap {
+  artist_name: string;
+  data: { date: string; hours: number; minutes?: number }[];
+}
+
+export interface SongDailyBreakdown {
+  track_name: string;
+  artist_name: string;
+  data: { date: string; plays: number; minutes?: number }[];
 }
 
 // ── Scatter plots ────────────────────────────────────────────────────────────

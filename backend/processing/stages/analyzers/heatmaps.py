@@ -47,7 +47,10 @@ def compute_heatmaps(df: pl.DataFrame) -> dict:
                 "artist_name",
                 pl.col("timestamp").dt.strftime("%Y-%m").alias("month"),
             )
-            .agg(pl.col("hours_played").sum().round(2).alias("hours"))
+            .agg(
+                pl.col("hours_played").sum().round(2).alias("hours"),
+                (pl.col("hours_played").sum() * 60).round(1).alias("minutes"),
+            )
             .sort("month")
         )
 
@@ -55,8 +58,28 @@ def compute_heatmaps(df: pl.DataFrame) -> dict:
         for (artist,), group in artist_month.group_by("artist_name", maintain_order=True):
             result.append({
                 "artist_name": artist,
-                "data": group.select("month", "hours").to_dicts(),
+                "data": group.select("month", "hours", "minutes").to_dicts(),
             })
         stats["artist_month_heatmap"] = result
+
+    # ── Artist × Day heatmap (top 10 artists, daily granularity) ───────────
+    if top_artist_names:
+        artist_daily = (
+            df.filter(pl.col("artist_name").is_in(top_artist_names))
+            .group_by("artist_name", "date")
+            .agg(
+                pl.col("hours_played").sum().round(2).alias("hours"),
+                (pl.col("hours_played").sum() * 60).round(1).alias("minutes"),
+            )
+            .sort("date")
+        )
+
+        result_daily = []
+        for (artist,), group in artist_daily.group_by("artist_name", maintain_order=True):
+            rows = group.select("date", "hours", "minutes").to_dicts()
+            for r in rows:
+                r["date"] = str(r["date"])
+            result_daily.append({"artist_name": artist, "data": rows})
+        stats["artist_daily_heatmap"] = result_daily
 
     return stats

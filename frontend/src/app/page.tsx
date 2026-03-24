@@ -1,8 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useInView } from "@/lib/hooks/use-in-view";
+
+const DemoCharts = dynamic(() => import("@/components/landing/demo-charts"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-3 gap-4">
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="bg-bg-deep/50 rounded-[var(--radius-sm)] h-24 animate-pulse"
+        />
+      ))}
+    </div>
+  ),
+});
 
 function FadeUp({
   children,
@@ -88,12 +103,17 @@ const FEATURES = [
   },
 ];
 
-const MOCK_STATS = [
-  { label: "Hours Listened", value: "2,847" },
-  { label: "Total Streams", value: "48,291" },
-  { label: "Unique Artists", value: "1,432" },
-  { label: "Unique Tracks", value: "8,761" },
-];
+function DemoPreview() {
+  const { ref, inView } = useInView();
+  return (
+    <div ref={ref} className="relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(29,185,84,0.1)_0%,transparent_70%)] pointer-events-none" />
+      <div className="bg-bg-card/40 border border-border rounded-[var(--radius-card)] p-6 md:p-10">
+        <DemoCharts inView={inView} />
+      </div>
+    </div>
+  );
+}
 
 const TESTIMONIALS = [
   {
@@ -207,7 +227,18 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
-
+      {/* Dashboard Preview */}
+      <section className="max-w-[1280px] mx-auto px-6 py-24">
+        <FadeUp>
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold text-center mb-4">
+            Dashboard Preview
+          </h2>
+          <p className="text-text-secondary text-center mb-12 max-w-md mx-auto">
+            A glimpse at what your personal dashboard looks like.
+          </p>
+        </FadeUp>
+        <DemoPreview />
+      </section>
       {/* How It Works */}
       <section className="max-w-[1280px] mx-auto px-6 py-24">
         <FadeUp>
@@ -271,37 +302,6 @@ export default function LandingPage() {
             </FadeUp>
           ))}
         </div>
-      </section>
-
-      {/* Dashboard Preview */}
-      <section className="max-w-[1280px] mx-auto px-6 py-24">
-        <FadeUp>
-          <div className="relative">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(29,185,84,0.1)_0%,transparent_70%)] pointer-events-none" />
-            <div className="bg-bg-card/40 border border-border rounded-[var(--radius-card)] p-8 md:p-12">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                {MOCK_STATS.map((stat) => (
-                  <div key={stat.label} className="text-center">
-                    <p className="font-[family-name:var(--font-display)] text-2xl font-extrabold text-green">
-                      {stat.value}
-                    </p>
-                    <p className="text-[10px] text-text-muted uppercase tracking-wider mt-1">
-                      {stat.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-bg-deep/50 rounded-[var(--radius-sm)] h-24 animate-pulse"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </FadeUp>
       </section>
 
       {/* Pricing */}

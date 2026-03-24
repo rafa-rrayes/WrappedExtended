@@ -54,7 +54,10 @@ def compute_line_charts(df: pl.DataFrame) -> dict:
                 "artist_name",
                 pl.col("timestamp").dt.strftime("%Y-%m").alias("month"),
             )
-            .agg(pl.len().alias("plays"))
+            .agg(
+                pl.len().alias("plays"),
+                (pl.col("hours_played").sum() * 60).round(1).alias("minutes"),
+            )
             .sort("month")
         )
 
@@ -65,8 +68,37 @@ def compute_line_charts(df: pl.DataFrame) -> dict:
             result.append({
                 "track_name": track,
                 "artist_name": artist,
-                "data": group.select("month", "plays").to_dicts(),
+                "data": group.select("month", "plays", "minutes").to_dicts(),
             })
         stats["song_monthly_breakdown"] = result
+
+    # ── Song daily breakdown (top 10 tracks, plays per day) ───────────────
+    if top_pairs:
+        daily_breakdown = (
+            filtered.group_by(
+                "track_name",
+                "artist_name",
+                "date",
+            )
+            .agg(
+                pl.len().alias("plays"),
+                (pl.col("hours_played").sum() * 60).round(1).alias("minutes"),
+            )
+            .sort("date")
+        )
+
+        result_daily = []
+        for (track, artist), group in daily_breakdown.group_by(
+            "track_name", "artist_name", maintain_order=True
+        ):
+            rows = group.select("date", "plays", "minutes").to_dicts()
+            for r in rows:
+                r["date"] = str(r["date"])
+            result_daily.append({
+                "track_name": track,
+                "artist_name": artist,
+                "data": rows,
+            })
+        stats["song_daily_breakdown"] = result_daily
 
     return stats

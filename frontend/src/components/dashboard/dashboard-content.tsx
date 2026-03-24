@@ -185,6 +185,8 @@ export function DashboardContent({
             <BarChartRace
               artistMonthHeatmap={stats.artist_month_heatmap}
               songMonthlyBreakdown={stats.song_monthly_breakdown}
+              artistDailyHeatmap={stats.artist_daily_heatmap}
+              songDailyBreakdown={stats.song_daily_breakdown}
             />
           </div>
           <div data-section="your-wrapped"><YourWrapped data={stats.wrapped_summaries ?? {}} /></div>
