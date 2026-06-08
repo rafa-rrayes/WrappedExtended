@@ -1,0 +1,162 @@
+# Production stack for Dokploy (Traefik ingress via Dokploy Domains).
+# Frontend → wrapex.rrayes.com.br : frontend:3000
+# Backend  → api.wrapex.rrayes.com.br : backend:8000
+# Postgres / Redis / MinIO are internal-only (no published ports).
+# All values come from the Dokploy "Environment" tab via ${VAR} interpolation.
+
+# Shared Django/Celery env — used by both the web and worker containers.
+x-django-env: &django-env
+  DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  DB_NAME: ${DB_NAME}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_HOST: ${DB_HOST}
+  DB_PORT: ${DB_PORT}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+  S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+  S3_REGION: ${S3_REGION}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+  FRONTEND_URL: ${FRONTEND_URL}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+  STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --appendonly no
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+
+  # One-shot: create the uploads bucket. Required because storage/client.py only
+  # auto-creates the bucket when DEBUG=True, and production runs DEBUG=False.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
+        echo 'waiting for minio...'; sleep 2;
+      done;
+      mc mb --ignore-existing local/$${S3_BUCKET_NAME};
+      echo 'bucket ready: '$${S3_BUCKET_NAME};
+      "
+    restart: "no"
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: >
+      sh -c "uv run python manage.py migrate --noinput &&
+             uv run gunicorn wrapex.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    environment:
+      <<: *django-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "python -c 'import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://127.0.0.1:8000/api/v1/health/\").status==200 else 1)'"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    networks:
+      - internal
+      - dokploy-network
+
+  celery-worker:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: uv run celery -A wrapex worker --loglevel=info --concurrency=2
+    environment:
+      <<: *django-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+volumes:
+  pgdata:
+  redis_data:
+  minio_data:
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
