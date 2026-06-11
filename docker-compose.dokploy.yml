@@ -100,6 +100,8 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     command: >
       sh -c "uv run python manage.py migrate --noinput &&
              uv run gunicorn wrapex.wsgi:application --bind 0.0.0.0:8000 --workers 3"
@@ -148,6 +150,8 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     restart: unless-stopped
+    ports:
+      - "3050:3050"
     networks:
       - dokploy-network
 
