@@ -87,7 +87,7 @@ services:
     build: ./frontend
     command: pnpm dev
     ports:
-      - "3000:3000"
+      - "3050:3050"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     depends_on:

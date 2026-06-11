@@ -105,7 +105,7 @@ class ProcessedDashboardAdmin(admin.ModelAdmin):
 
     @admin.display(description="Frontend Link")
     def frontend_link(self, obj):
-        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3050")
         url = f"{frontend_url}/dashboard/{obj.id}"
         return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
 

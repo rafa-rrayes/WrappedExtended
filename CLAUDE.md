@@ -9,7 +9,7 @@ WrapEx (WrappedExtended) — a PaaS where users upload their Spotify Extended St
 ## Quick Start
 
 ```bash
-./wrapex dev       # Start Django (:8000) + Next.js (:3000) — auto-installs deps, runs migrations
+./wrapex dev       # Start Django (:8000) + Next.js (:3050) — auto-installs deps, runs migrations
 ./wrapex docker    # Full stack via Docker Compose (Postgres, Redis, MinIO, backend, Celery, frontend)
 ./wrapex migrate   # Shorthand for Django migrations
 ```
@@ -34,7 +34,7 @@ uv run ruff format .                       # Format
 ### Frontend (run from `frontend/`)
 ```bash
 pnpm install    # Install deps
-pnpm dev        # Dev server on :3000
+pnpm dev        # Dev server on :3050
 pnpm build      # Production build
 pnpm lint       # Lint
 npx tsc --noEmit  # Type check without build

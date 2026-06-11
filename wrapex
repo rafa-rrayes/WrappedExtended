@@ -101,13 +101,13 @@ cmd_dev() {
     PIDS+=($!)
 
     # ── Start Next.js frontend ──
-    log "Starting Next.js on ${DIM}http://localhost:3000${RESET}"
+    log "Starting Next.js on ${DIM}http://localhost:3050${RESET}"
     (cd "$FRONTEND_DIR" && pnpm dev 2>&1 | sed "s/^/  ${DIM}[frontend]${RESET} /") &
     PIDS+=($!)
 
     echo ""
     log "All services running:"
-    echo -e "  ${GREEN}Frontend${RESET}  → http://localhost:3000"
+    echo -e "  ${GREEN}Frontend${RESET}  → http://localhost:3050"
     echo -e "  ${GREEN}Backend${RESET}   → http://localhost:8000"
     echo -e "  ${GREEN}MinIO UI${RESET}  → http://localhost:9001 ${DIM}(minioadmin/minioadmin)${RESET}"
     echo ""
