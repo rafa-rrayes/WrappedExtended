@@ -63,6 +63,11 @@ celerybeat.pid
 # uv
 .python-version
 
+# Claude Code session exports & working notes — these capture raw container env
+# dumps (live Stripe keys, DJANGO_SECRET_KEY, DB passwords). Never commit them.
+sessions/
+tasks/
+
 # TypeScript build info
 *.tsbuildinfo
 
