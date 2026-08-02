@@ -20,7 +20,11 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
 
 # Security
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = True
+# Behind a TLS-terminating edge (Cloudflare Tunnel -> Traefik), Traefik rewrites
+# X-Forwarded-Proto to the scheme *it* received (http), so Django can never see the
+# original https and would redirect to itself forever. Disable the app-level redirect
+# in that topology and let the edge enforce HTTPS instead.
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
