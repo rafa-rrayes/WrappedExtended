@@ -570,6 +570,11 @@ export interface EntityDetail {
 export interface EntityDetailParams {
   type: EntityType;
   name: string;
+  /**
+   * Disambiguates tracks/albums that share a title with a different entity, matching how
+   * the browse endpoint keys them by (name, artist). Omit it to merge by name.
+   */
+  artist?: string | null;
   from?: string | null;
   to?: string | null;
 }

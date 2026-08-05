@@ -56,6 +56,9 @@ class EntityBrowseSerializer(DateRangeParamsMixin, serializers.Serializer):
 class EntityDetailSerializer(DateRangeParamsMixin, serializers.Serializer):
     type = serializers.ChoiceField(choices=["artist", "track", "album"])
     name = serializers.CharField(min_length=1, max_length=500)
+    # Optional: two tracks can share a title, and `browse_entities` keys them by
+    # (name, artist). Omitting it keeps the older merged-by-name behaviour.
+    artist = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
 
 
 class ComparePeriodsSerializer(serializers.Serializer):

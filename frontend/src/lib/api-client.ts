@@ -359,6 +359,7 @@ export const apiClient = {
       type: params.type,
       name: params.name,
     });
+    if (params.artist) searchParams.set("artist", params.artist);
     if (params.from) searchParams.set("from", params.from);
     if (params.to) searchParams.set("to", params.to);
     const res = await fetchWithAuth(

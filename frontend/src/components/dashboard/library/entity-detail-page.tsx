@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import type { EntityDetail, EntityType } from "@/types/dashboard";
 import { ApiError, apiClient } from "@/lib/api-client";
@@ -30,14 +30,20 @@ export function EntityDetailPage({ type }: { type: EntityType }) {
   const params = useParams<{ dashboardId: string; name: string }>();
   const name = decodeEntityName(params?.name);
 
+  // A title is not a key for tracks and albums: the library lists two different songs
+  // called "Alive" as separate rows, so it links here with the artist that tells them
+  // apart. Absent (or on an artist page) the API falls back to merging by name.
+  const searchParams = useSearchParams();
+  const artist = type === "artist" ? null : searchParams.get("artist");
+
   const { dashboardId, bounds } = useDashboardContext();
   const { from, to, isFiltered } = useDateRange(bounds);
   const withRange = useRangeHref();
   const meta = ENTITY_META[type];
 
   const { data, error, isLoading, mutate } = useSWR<EntityDetail>(
-    name ? ["entity-detail", dashboardId, type, name, from, to] : null,
-    () => apiClient.getEntityDetail(dashboardId, { type, name, from, to }),
+    name ? ["entity-detail", dashboardId, type, name, artist, from, to] : null,
+    () => apiClient.getEntityDetail(dashboardId, { type, name, artist, from, to }),
     {
       revalidateOnFocus: false,
       // A 404 is an answer, not a hiccup — retrying it just delays the empty state.
@@ -79,18 +85,22 @@ export function EntityDetailPage({ type }: { type: EntityType }) {
       ? withRange(entityHref(dashboardId, "artist", data.artist_name))
       : undefined;
 
+  // Children of an artist page belong to that artist; children of an album page belong to
+  // the album's artist. Either way they need it to stay distinct from same-titled entries.
+  const childArtist = type === "artist" ? data.name : data.artist_name;
+
   const topTracks: RankedRow[] = data.top_tracks.map((track) => ({
     name: track.track_name,
     hours: track.hours,
     plays: track.plays,
-    href: withRange(entityHref(dashboardId, "track", track.track_name)),
+    href: withRange(entityHref(dashboardId, "track", track.track_name, childArtist)),
   }));
 
   const albums: RankedRow[] = data.albums.map((album) => ({
     name: album.album_name,
     hours: album.hours,
     plays: album.plays,
-    href: withRange(entityHref(dashboardId, "album", album.album_name)),
+    href: withRange(entityHref(dashboardId, "album", album.album_name, childArtist)),
   }));
 
   const showChildren = meta.hasChildren && (topTracks.length > 0 || albums.length > 0);

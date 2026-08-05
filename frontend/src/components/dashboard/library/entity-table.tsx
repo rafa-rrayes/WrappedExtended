@@ -76,7 +76,7 @@ export function EntityTable({
         {rows.map((row) => (
           <li key={`${row.rank}-${row.name}-${row.artist_name ?? ""}`}>
             <Link
-              href={withRange(entityHref(dashboardId, type, row.name))}
+              href={withRange(entityHref(dashboardId, type, row.name, row.artist_name))}
               className="block rounded-[var(--radius-card)] border border-border bg-bg-card p-3.5 transition-colors active:bg-bg-card-hover"
             >
               <div className="flex items-start gap-3">
@@ -175,7 +175,7 @@ function EntityRow({
   withRange: (href: string) => string;
 }) {
   const router = useRouter();
-  const href = withRange(entityHref(dashboardId, type, row.name));
+  const href = withRange(entityHref(dashboardId, type, row.name, row.artist_name));
 
   return (
     <tr

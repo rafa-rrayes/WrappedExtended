@@ -72,9 +72,20 @@ export function libraryHref(dashboardId: string, type: EntityType): string {
  * `encodeURIComponent` is not optional here: artist names legitimately contain `/`
  * (AC/DC), `?`, `#` and `%`, all of which would otherwise change the shape of the URL
  * rather than sitting inside the `[name]` segment.
+ *
+ * `artist` rides along as a query param for tracks and albums, because a title alone is
+ * not a key — two different songs called "Alive" would otherwise open the same page with
+ * their stats merged. It is meaningless for artists, whose name is already the key.
  */
-export function entityHref(dashboardId: string, type: EntityType, name: string): string {
-  return `${libraryHref(dashboardId, type)}/${encodeURIComponent(name)}`;
+export function entityHref(
+  dashboardId: string,
+  type: EntityType,
+  name: string,
+  artist?: string | null,
+): string {
+  const path = `${libraryHref(dashboardId, type)}/${encodeURIComponent(name)}`;
+  if (type === "artist" || !artist) return path;
+  return `${path}?artist=${encodeURIComponent(artist)}`;
 }
 
 /**

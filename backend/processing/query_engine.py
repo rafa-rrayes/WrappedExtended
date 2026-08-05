@@ -168,13 +168,28 @@ def _primary_artist(filtered: pl.DataFrame) -> str | None:
     return ranked["artist_name"][0] if not ranked.is_empty() else None
 
 
-def search_entity(df: pl.DataFrame, entity_type: str, name: str) -> dict:
+def _entity_rows(df: pl.DataFrame, column: str, name: str, artist: str | None) -> pl.DataFrame:
+    """Rows for one entity, narrowed by artist when the caller disambiguates.
+
+    `browse_entities` groups tracks and albums by (name, artist), so two songs sharing a
+    title are separate rows there. Without the same narrowing here they would collapse
+    into a single detail page with their stats merged.
+    """
+    rows = df.filter(pl.col(column) == name)
+    if artist and column != "artist_name" and "artist_name" in df.columns:
+        rows = rows.filter(pl.col("artist_name") == artist)
+    return rows
+
+
+def search_entity(
+    df: pl.DataFrame, entity_type: str, name: str, artist: str | None = None
+) -> dict:
     """Compute micro-dashboard stats for a specific artist, track, or album."""
     column = _entity_column(df, entity_type)
     if column is None:
         return {}
 
-    filtered = df.filter(pl.col(column) == name)
+    filtered = _entity_rows(df, column, name, artist)
     if filtered.is_empty():
         return {}
 
@@ -349,16 +364,29 @@ def browse_entities(
     return {"count": count, "page": page, "page_size": page_size, "results": results}
 
 
-def _entity_rank(scoped: pl.DataFrame, column: str, name: str) -> int | None:
-    """1-based rank of `name` by hours listened among all entities in that column."""
+def _entity_rank(
+    scoped: pl.DataFrame, column: str, name: str, artist: str | None = None
+) -> int | None:
+    """1-based rank of `name` by hours listened among all entities in that column.
+
+    Groups by (name, artist) when disambiguating so the rank agrees with the position
+    `browse_entities` reports for the same row.
+    """
+    group_cols = [column]
+    disambiguate = bool(artist) and column != "artist_name" and "artist_name" in scoped.columns
+    if disambiguate:
+        group_cols.append("artist_name")
+
     ranked = (
         scoped.filter(pl.col(column).is_not_null())
-        .group_by(column)
+        .group_by(group_cols)
         .agg(pl.col("hours_played").sum().alias("hours"))
-        .sort(["hours", column], descending=[True, False])
+        .sort(["hours", *group_cols], descending=[True, *[False] * len(group_cols)])
         .with_row_index("rank", offset=1)
         .filter(pl.col(column) == name)
     )
+    if disambiguate:
+        ranked = ranked.filter(pl.col("artist_name") == artist)
     return int(ranked["rank"][0]) if not ranked.is_empty() else None
 
 
@@ -460,8 +488,12 @@ def entity_detail(
     name: str,
     start: date | None = None,
     end: date | None = None,
+    artist: str | None = None,
 ) -> dict:
     """Everything `search_entity` returns, enriched for a full per-entity page.
+
+    `artist` disambiguates tracks and albums that share a title with another entity;
+    it is ignored for `entity_type="artist"`, where the name is already the key.
 
     Returns {} when the name matches nothing in the (optionally date-filtered) data.
     """
@@ -470,14 +502,14 @@ def entity_detail(
         return {}
 
     scoped = filter_by_date_range(df, start, end)
-    result = search_entity(scoped, entity_type, name)
+    result = search_entity(scoped, entity_type, name, artist)
     if not result:
         return {}
 
-    rows = scoped.filter(pl.col(column) == name)
+    rows = _entity_rows(scoped, column, name, artist)
     has_children = entity_type in ("artist", "album")
 
-    result["rank"] = _entity_rank(scoped, column, name)
+    result["rank"] = _entity_rank(scoped, column, name, artist)
     result["skip_rate"] = _skip_rate(rows)
     result["albums"] = _grouped_list(rows, "album_name") if has_children else []
     result["top_tracks"] = _grouped_list(rows, "track_name") if has_children else []

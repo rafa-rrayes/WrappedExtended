@@ -308,6 +308,7 @@ class EntityDetailView(DashboardFeatureMixin, APIView):
             name=data["name"],
             start=data.get("from"),
             end=data.get("to"),
+            artist=data.get("artist") or None,
         )
         if not result:
             return Response({"detail": "Entity not found."}, status=status.HTTP_404_NOT_FOUND)
