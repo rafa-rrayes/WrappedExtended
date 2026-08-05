@@ -88,6 +88,33 @@ class ProcessedDashboard(models.Model):
         return f"Dashboard for {self.upload.original_filename}"
 
 
+class MLInsight(models.Model):
+    """Output of the ML suite (`processing/ml/`) for one dashboard.
+
+    Computed off the upload pipeline by `compute_ml_insights`, on demand, because the
+    models are CPU-heavy. `insights` holds the frozen JSON contract the frontend is typed
+    against; it stays `{}` until a run succeeds.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        READY = "ready", "Ready"
+        FAILED = "failed", "Failed"
+
+    dashboard = models.OneToOneField(
+        ProcessedDashboard, on_delete=models.CASCADE, related_name="ml_insight"
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    insights = models.JSONField(default=dict, help_text="Full ML insights payload")
+    error_message = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ML insights for {self.dashboard_id} ({self.status})"
+
+
 class Payment(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"

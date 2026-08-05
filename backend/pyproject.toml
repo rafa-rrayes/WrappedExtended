@@ -17,6 +17,20 @@ dependencies = [
     "whitenoise>=6.8,<7",
     "stripe>=14.4.1",
     "sentry-sdk[django,celery]>=2.19,<3",
+    "scikit-learn>=1.5,<2",
+    "statsmodels>=0.14,<1",
+    "pandas>=2.2,<3",
+    "pyarrow>=18",
+]
+
+# Deliberately NOT installed by default: torch alone is >1GB, which we refuse to
+# carry in the web/worker image. `processing/ml/` degrades gracefully without them
+# (the MLP and LSTM report `available: false`, UMAP falls back to t-SNE), so this
+# extra exists only for a dedicated deep-learning worker: `uv sync --extra ml-deep`.
+[project.optional-dependencies]
+ml-deep = [
+    "torch>=2.5",
+    "umap-learn>=0.5",
 ]
 
 # Installed by a plain `uv sync`, unlike [project.optional-dependencies] which

@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
 from . import views_dashboard_features as feature_views
+from . import views_ml as ml_views
 
 app_name = "api"
 
@@ -70,5 +71,32 @@ urlpatterns = [
         "dashboards/<uuid:dashboard_id>/journey/",
         feature_views.JourneyView.as_view(),
         name="journey",
+    ),
+    # Entity library (browse + per-entity pages) and period comparison
+    path(
+        "dashboards/<uuid:dashboard_id>/entities/",
+        feature_views.EntityBrowseView.as_view(),
+        name="entity-browse",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/entities/detail/",
+        feature_views.EntityDetailView.as_view(),
+        name="entity-detail",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/compare/",
+        feature_views.ComparePeriodsView.as_view(),
+        name="compare-periods",
+    ),
+    # ML insights
+    path(
+        "dashboards/<uuid:dashboard_id>/ml/",
+        ml_views.MLInsightsView.as_view(),
+        name="ml-insights",
+    ),
+    path(
+        "dashboards/<uuid:dashboard_id>/ml/compute/",
+        ml_views.MLInsightsComputeView.as_view(),
+        name="ml-insights-compute",
     ),
 ]

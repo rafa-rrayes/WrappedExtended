@@ -18,15 +18,74 @@ class SearchSuggestSerializer(serializers.Serializer):
 
 class SearchEntitySerializer(serializers.Serializer):
     q = serializers.CharField(min_length=1, max_length=200)
-    type = serializers.ChoiceField(choices=["artist", "track"])
+    type = serializers.ChoiceField(choices=["artist", "track", "album"])
+
+
+class DateRangeParamsMixin:
+    """Adds the optional `from` / `to` query params.
+
+    They can't be declared as class attributes (`from` is a Python keyword), so they are
+    injected in get_fields() and read out of validated_data by key.
+    """
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["from"] = serializers.DateField(required=False)
+        fields["to"] = serializers.DateField(required=False)
+        return fields
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        start, end = attrs.get("from"), attrs.get("to")
+        if start and end and start > end:
+            raise serializers.ValidationError({"to": "`to` must be on or after `from`."})
+        return attrs
+
+
+class EntityBrowseSerializer(DateRangeParamsMixin, serializers.Serializer):
+    type = serializers.ChoiceField(choices=["artist", "track", "album"])
+    q = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    sort = serializers.ChoiceField(
+        choices=["hours", "plays", "name", "first", "last"], default="hours"
+    )
+    order = serializers.ChoiceField(choices=["asc", "desc"], default="desc")
+    page = serializers.IntegerField(min_value=1, max_value=100_000, default=1)
+    page_size = serializers.IntegerField(min_value=1, max_value=200, default=50)
+
+
+class EntityDetailSerializer(DateRangeParamsMixin, serializers.Serializer):
+    type = serializers.ChoiceField(choices=["artist", "track", "album"])
+    name = serializers.CharField(min_length=1, max_length=500)
+
+
+class ComparePeriodsSerializer(serializers.Serializer):
+    a_start = serializers.DateField()
+    a_end = serializers.DateField()
+    b_start = serializers.DateField()
+    b_end = serializers.DateField()
+
+    def validate(self, attrs):
+        for period in ("a", "b"):
+            if attrs[f"{period}_start"] > attrs[f"{period}_end"]:
+                raise serializers.ValidationError(
+                    {f"{period}_end": f"`{period}_end` must be on or after `{period}_start`."}
+                )
+        return attrs
 
 
 class ChartBuilderSerializer(serializers.Serializer):
     metric = serializers.ChoiceField(choices=["hours", "plays", "avg_hours"])
     group_by = serializers.ChoiceField(
         choices=[
-            "artist_name", "track_name", "album_name", "platform",
-            "year", "month", "hour", "weekday", "date",
+            "artist_name",
+            "track_name",
+            "album_name",
+            "platform",
+            "year",
+            "month",
+            "hour",
+            "weekday",
+            "date",
         ]
     )
     limit = serializers.IntegerField(min_value=1, max_value=1000, default=100)
