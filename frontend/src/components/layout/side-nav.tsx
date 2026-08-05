@@ -28,9 +28,20 @@ const NAV_ITEMS = [
   { id: "benchmarks", label: "Benchmarks" },
   { id: "weekend", label: "Wknd / Wkdy" },
   { id: "latenight", label: "Late Night" },
+  { id: "bar-chart-race", label: "Race" },
   { id: "wrapped", label: "Wrapped" },
 ];
 
+/**
+ * Scroll-spy rail for the story scroll.
+ *
+ * Only `/dashboard/{id}/story` renders this — the split routes navigate with the shell
+ * sidebar instead. Every id above is the anchor of a section inside `DashboardContent`;
+ * sections that are absent from a sparse export simply never register with the observer.
+ *
+ * It sits immediately right of the shell's sidebar via `--shell-sidebar-w`, which the
+ * dashboard layout sets (and which falls back to 0 outside it).
+ */
 export function SideNav() {
   const [active, setActive] = useState("hero");
   const { scrollYProgress } = useScroll();
@@ -57,7 +68,7 @@ export function SideNav() {
   }, []);
 
   return (
-    <nav className="fixed left-0 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1 py-3 px-2 bg-bg-primary/85 backdrop-blur-xl border-r border-border rounded-r-[var(--radius-card)] md:flex hidden">
+    <nav className="fixed left-[var(--shell-sidebar-w,0px)] top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1 py-3 px-2 bg-bg-primary/85 backdrop-blur-xl border-r border-border rounded-r-[var(--radius-card)] md:flex hidden">
       {/* Scroll progress line */}
       <div className="absolute left-[13px] top-3 bottom-3 w-[2px] bg-white/[0.06] rounded-full pointer-events-none">
         <motion.div

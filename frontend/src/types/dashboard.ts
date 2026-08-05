@@ -453,3 +453,355 @@ export interface MoodEntry {
   exploration: number;
   total_hours: number;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Entity browsing — GET /dashboards/{id}/entities/
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EntityType = "artist" | "track" | "album";
+
+/** Sort keys accepted by the entity list endpoint. */
+export type EntitySort = "hours" | "plays" | "name" | "first" | "last";
+
+export type SortOrder = "asc" | "desc";
+
+export interface EntityListItem {
+  name: string;
+  /** Null for `type=artist`, and for exports with no artist column. */
+  artist_name: string | null;
+  hours: number;
+  plays: number;
+  /** YYYY-MM-DD */
+  first_listen: string;
+  /** YYYY-MM-DD */
+  last_listen: string;
+  /** 1-based position in the current sort, across all pages. */
+  rank: number;
+}
+
+export interface EntityListResponse {
+  /** Total matching entities, before pagination. */
+  count: number;
+  page: number;
+  page_size: number;
+  results: EntityListItem[];
+}
+
+/** Query params for `apiClient.getEntities`. */
+export interface EntityListParams {
+  type: EntityType;
+  q?: string;
+  sort?: EntitySort;
+  order?: SortOrder;
+  page?: number;
+  page_size?: number;
+  from?: string | null;
+  to?: string | null;
+}
+
+// ── Entity detail — GET /dashboards/{id}/entities/detail/ ─────────────────────
+
+export interface EntityMonthlyPoint {
+  month: string;
+  hours: number;
+  plays: number;
+}
+
+export interface EntityHourlyPoint {
+  hour: number;
+  streams: number;
+}
+
+export interface EntityPlatformSlice {
+  platform: string;
+  count: number;
+}
+
+export interface EntityAlbumStat {
+  album_name: string;
+  hours: number;
+  plays: number;
+}
+
+export interface EntityTrackStat {
+  track_name: string;
+  hours: number;
+  plays: number;
+}
+
+export interface EntityCompanion {
+  artist_name: string;
+  shared_sessions: number;
+}
+
+export interface EntityWeekdayPoint {
+  /** 1 = Monday … 7 = Sunday. Always all seven days. */
+  weekday: number;
+  day_name: string;
+  plays: number;
+}
+
+export interface EntityDetail {
+  name: string;
+  type: EntityType;
+  total_hours: number;
+  total_plays: number;
+  /** YYYY-MM-DD */
+  first_listen: string;
+  /** YYYY-MM-DD */
+  last_listen: string;
+  monthly_timeline: EntityMonthlyPoint[];
+  hourly_distribution: EntityHourlyPoint[];
+  platform_breakdown: EntityPlatformSlice[];
+  /** Present for tracks/albums (their most-played artist); absent for artists. */
+  artist_name?: string | null;
+  /** 1-based rank by hours among entities of the same type; null when unknowable. */
+  rank: number | null;
+  /** 0–1, or null when the export has no skip column. */
+  skip_rate: number | null;
+  albums: EntityAlbumStat[];
+  top_tracks: EntityTrackStat[];
+  companions: EntityCompanion[];
+  longest_streak_days: number;
+  weekday_distribution: EntityWeekdayPoint[];
+}
+
+/** Query params for `apiClient.getEntityDetail`. */
+export interface EntityDetailParams {
+  type: EntityType;
+  name: string;
+  from?: string | null;
+  to?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Period comparison — GET /dashboards/{id}/compare/
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ComparePeriod {
+  label: string;
+  /** YYYY-MM-DD */
+  start: string;
+  /** YYYY-MM-DD */
+  end: string;
+  stats: DashboardData;
+}
+
+export interface CompareDelta {
+  a: number;
+  b: number;
+  /** b − a */
+  abs: number;
+  /** Percentage change from A to B; null when A is zero. */
+  pct: number | null;
+}
+
+export interface CompareResponse {
+  period_a: ComparePeriod;
+  period_b: ComparePeriod;
+  /** Keyed by metric name: total_hours, total_streams, unique_artists, … */
+  deltas: Record<string, CompareDelta>;
+}
+
+/** Query params for `apiClient.getCompare`. */
+export interface CompareParams {
+  a_start: string;
+  a_end: string;
+  b_start: string;
+  b_end: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ML insights — GET /dashboards/{id}/ml/ , POST /dashboards/{id}/ml/compute/
+//
+// Every sub-model is optional/nullable: they are trained independently and any one
+// of them can be missing (too little data, optional dependency absent, crash) while
+// the rest are fine. Always guard before reading into one.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type MLStatus = "pending" | "ready" | "failed" | "unavailable";
+
+export interface MLSummary {
+  rows: number;
+  date_min: string;
+  date_max: string;
+  total_hours: number;
+  unique_artists: number;
+  unique_tracks: number;
+  sessions: number;
+  /** 0–1 */
+  skip_rate: number;
+}
+
+// ── Embeddings / taste map ───────────────────────────────────────────────────
+
+export interface MLEmbeddingPoint {
+  artist: string;
+  x: number;
+  y: number;
+  /** Cluster id this artist was assigned to; matches `MLScene.scene`. */
+  scene: number;
+  hours: number;
+}
+
+export interface MLScene {
+  scene: number;
+  label: string;
+  artists: string[];
+  /** Number of artists in the scene (offline suite extra). */
+  size?: number;
+  hours?: number;
+}
+
+export interface MLSimilarArtist {
+  artist: string;
+  /** Cosine similarity, 0–1. */
+  score: number;
+}
+
+export interface MLSimilarTrack {
+  track: string;
+  score: number;
+}
+
+export interface MLEmbeddings {
+  method: string;
+  projection: string;
+  artists_plotted: number;
+  points: MLEmbeddingPoint[];
+  scenes: MLScene[];
+  /** Artist name → its nearest neighbours. */
+  similar_artists: Record<string, MLSimilarArtist[]>;
+  model?: {
+    artists_embedded: number;
+    tracks_embedded: number;
+    vector_size: number;
+    sessions_used: number;
+  };
+  similar_to_top_track?: { track: string; neighbors: MLSimilarTrack[] };
+}
+
+// ── Session clustering / listening modes ─────────────────────────────────────
+
+export interface MLListeningMode {
+  mode: number;
+  name: string;
+  n_sessions: number;
+  pct_sessions: number;
+  total_hours: number;
+  avg_plays: number;
+  avg_min_per_track: number;
+  /** 0–1 */
+  skip_rate: number;
+  /** 0–1 */
+  shuffle_rate: number;
+  /** 0–1 */
+  artist_diversity: number;
+  /** Hour of day, may be fractional. */
+  median_start_hour: number;
+}
+
+export interface MLClustering {
+  n_sessions: number;
+  modes: MLListeningMode[];
+}
+
+// ── Skip prediction ──────────────────────────────────────────────────────────
+
+export interface MLSkipDriver {
+  feature: string;
+  importance: number;
+}
+
+export interface MLPytorchMLP {
+  available: boolean;
+  auc?: number;
+  epochs?: number;
+  /** Set when `available` is false. */
+  error?: string;
+}
+
+export interface MLSkipModel {
+  /** 0–1 */
+  baseline_skip_rate: number;
+  gradient_boosting_auc: number;
+  pytorch_mlp: MLPytorchMLP;
+  drivers: MLSkipDriver[];
+}
+
+// ── Next-artist sequence model ───────────────────────────────────────────────
+
+export interface MLSequencePrediction {
+  after: string;
+  predicts: string[];
+}
+
+export interface MLSequenceModel {
+  available: boolean;
+  /** Set when `available` is false. */
+  error?: string;
+  params?: { vocab: number; emb: number; hidden: number; epochs: number };
+  sessions_train?: number;
+  sessions_test?: number;
+  next_artist_top1?: number;
+  next_artist_top5?: number;
+  baseline_top1?: number;
+  lift_over_baseline?: number;
+  train_loss_curve?: number[];
+  sample_predictions?: MLSequencePrediction[];
+}
+
+// ── Forecast & anomalies ─────────────────────────────────────────────────────
+
+export interface MLHistoryPoint {
+  /** YYYY-MM-DD, first of the month. */
+  month: string;
+  hours: number;
+}
+
+export interface MLForecastPoint {
+  /** YYYY-MM-DD, first of the month. */
+  month: string;
+  hours: number;
+  lower: number;
+  upper: number;
+}
+
+export interface MLAnomalousDay {
+  /** YYYY-MM-DD */
+  date: string;
+  hours: number;
+  plays: number;
+  unique_artists: number;
+  skip_rate: number;
+}
+
+export interface MLForecast {
+  history_months: number;
+  avg_monthly_hours_last_year: number;
+  history: MLHistoryPoint[];
+  forecast_next_6_months: MLForecastPoint[];
+  anomalous_days: MLAnomalousDay[];
+}
+
+export interface MLInsights {
+  summary: MLSummary;
+  embeddings?: MLEmbeddings | null;
+  clustering?: MLClustering | null;
+  skip_model?: MLSkipModel | null;
+  sequence_model?: MLSequenceModel | null;
+  forecast?: MLForecast | null;
+}
+
+/** GET /dashboards/{id}/ml/ */
+export interface MLResponse {
+  status: MLStatus;
+  /** Only populated when `status === "ready"`. */
+  insights: MLInsights | null;
+  error_message?: string;
+}
+
+/** POST /dashboards/{id}/ml/compute/ */
+export interface MLComputeResponse {
+  status: MLStatus;
+}
