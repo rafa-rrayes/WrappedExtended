@@ -19,11 +19,12 @@ def compute_nostalgia(df: pl.DataFrame) -> dict:
             pl.len().alias("plays"),
         )
         .with_columns(
-            (pl.col("latest_listen") - pl.col("first_listen"))
-            .dt.total_days()
-            .alias("span_days")
+            (pl.col("latest_listen") - pl.col("first_listen")).dt.total_days().alias("span_days")
         )
-        .filter(pl.col("plays") >= 3)
+        # A 20-play floor, not 3. Ranking purely by date span let a track played twice
+        # years apart — an ad jingle, in one real export — outrank genuine long-term
+        # favourites. Loving something for a decade implies having played it.
+        .filter(pl.col("plays") >= 20)
         .sort("span_days", descending=True)
         .head(30)
     )
@@ -35,14 +36,11 @@ def compute_nostalgia(df: pl.DataFrame) -> dict:
     stats["nostalgia_tracks"] = nostalgia_dicts
 
     # ── Music lifecycle (peak month + months active per track) ────────────────
-    track_monthly = (
-        tracks.group_by(
-            "track_name",
-            "artist_name",
-            pl.col("timestamp").dt.strftime("%Y-%m").alias("month"),
-        )
-        .agg(pl.len().alias("plays"))
-    )
+    track_monthly = tracks.group_by(
+        "track_name",
+        "artist_name",
+        pl.col("timestamp").dt.strftime("%Y-%m").alias("month"),
+    ).agg(pl.len().alias("plays"))
 
     # find peak month per track
     peak = (

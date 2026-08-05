@@ -22,8 +22,14 @@ interface SkipAnalysisProps {
   completionRates?: TrackCompletionRate[];
 }
 
-/** Interpolate from green (#1DB954) at low skip rates to pink (#E91E63) at high skip rates. */
-function skipRateColor(ratio: number): string {
+/**
+ * Interpolate from green (#1DB954) at 0% skipped to pink (#E91E63) at 100% skipped.
+ *
+ * @param skipRatePct - skip rate on the **0-100 percentage scale** the API returns
+ *   (`skips / plays * 100`), not a 0-1 ratio.
+ */
+function skipRateColor(skipRatePct: number): string {
+  const ratio = Math.min(Math.max(skipRatePct, 0), 100) / 100;
   const r = Math.round(29 + (233 - 29) * ratio);
   const g = Math.round(185 + (30 - 185) * ratio);
   const b = Math.round(84 + (99 - 84) * ratio);
@@ -67,7 +73,7 @@ export function SkipAnalysis({
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                     <XAxis
                       type="number"
-                      tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                      tickFormatter={(v: number) => `${v.toFixed(0)}%`}
                       domain={[0, "dataMax"]}
                       tick={{ fontSize: 10, fill: "#555" }}
                       axisLine={false}
@@ -87,22 +93,12 @@ export function SkipAnalysis({
                         border: "1px solid rgba(233,30,99,0.3)",
                         borderRadius: 8,
                       }}
-                      formatter={(value: number) => [
-                        `${(value * 100).toFixed(1)}%`,
-                        "Skip Rate",
-                      ]}
+                      formatter={(value: number) => [`${value.toFixed(1)}%`, "Skip Rate"]}
                     />
                     <Bar dataKey="skip_rate" radius={[0, 4, 4, 0]} isAnimationActive={inView}>
-                      {skipRateByArtist.map((entry, i) => {
-                        const ratio = entry.skip_rate;
-                        return (
-                          <Cell
-                            key={i}
-                            fill={skipRateColor(ratio)}
-                            fillOpacity={0.8}
-                          />
-                        );
-                      })}
+                      {skipRateByArtist.map((entry, i) => (
+                        <Cell key={i} fill={skipRateColor(entry.skip_rate)} fillOpacity={0.8} />
+                      ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -119,15 +115,20 @@ export function SkipAnalysis({
                   <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                     <XAxis
+                      type="number"
                       dataKey="plays"
+                      domain={[0, "auto"]}
+                      allowDecimals={false}
                       tick={{ fontSize: 10, fill: "#555" }}
                       axisLine={false}
                       tickLine={false}
                       name="Plays"
                     />
                     <YAxis
+                      type="number"
                       dataKey="skip_rate"
-                      tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                      domain={[0, "auto"]}
+                      tickFormatter={(v: number) => `${v.toFixed(0)}%`}
                       tick={{ fontSize: 10, fill: "#555" }}
                       axisLine={false}
                       tickLine={false}
@@ -149,7 +150,7 @@ export function SkipAnalysis({
                             <div className="font-semibold text-text-primary text-xs">{d.track_name}</div>
                             <div className="text-text-secondary text-[0.65rem]">{d.artist_name}</div>
                             <div className="text-[#E91E63] text-[0.65rem] mt-1">
-                              {d.plays} plays · {(d.skip_rate * 100).toFixed(1)}% skipped
+                              {d.plays} plays · {d.skip_rate.toFixed(1)}% skipped
                             </div>
                           </div>
                         );

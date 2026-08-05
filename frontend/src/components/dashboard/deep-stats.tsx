@@ -157,7 +157,7 @@ export function DeepStats({ summary, diversity }: DeepStatsProps) {
                     </div>
                     <div className="text-center">
                       <div className="font-[family-name:var(--font-display)] text-lg font-bold text-gold">
-                        {(diversity.top10_concentration * 100).toFixed(0)}%
+                        {diversity.top10_concentration.toFixed(0)}%
                       </div>
                       <div className="text-text-muted text-[0.6rem] uppercase tracking-wider mt-0.5">
                         Top 10 Share

@@ -11,8 +11,21 @@ export interface Achievement {
   unlocked: boolean;
   progress: number;
   target: number;
-  context?: string;
+  /**
+   * The badge's actual number, always populated. A tier with no value behind it ("Platform
+   * Hopper — PLATINUM") tells the reader nothing, so every badge carries its figure:
+   * "6 platforms" once earned, "1 / 2 platforms" while it is still locked.
+   */
+  context: string;
 }
+
+/**
+ * How a rule's raw value should be written out. Counts round and get thousands
+ * separators, percentages round to whole points, scores keep two decimals (the diversity
+ * tiers are 0.05 apart, so one decimal would collapse three of them into the same string)
+ * and rates keep one.
+ */
+type ValueFormat = "count" | "percent" | "score" | "rate";
 
 interface AchievementRule {
   id: string;
@@ -21,6 +34,11 @@ interface AchievementRule {
   description: string;
   tiers: { tier: AchievementTier; target: number }[];
   getValue: (data: DashboardData) => number;
+  /** How to print `getValue`'s output. */
+  format: ValueFormat;
+  /** Noun that follows the number, e.g. "3 platforms". Empty where the unit is the "%". */
+  unit: string;
+  /** Richer copy for the unlocked state, where the bare number reads thin. */
   getContext?: (data: DashboardData, value: number) => string;
 }
 
@@ -37,6 +55,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 5000 },
     ],
     getValue: (d) => d.total_hours,
+    format: "count",
+    unit: "hours",
     getContext: (_, v) => `${Math.round(v)} hours of music`,
   },
   {
@@ -51,6 +71,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 500000 },
     ],
     getValue: (d) => d.total_streams,
+    format: "count",
+    unit: "streams",
   },
   {
     id: "world-traveler",
@@ -64,6 +86,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 20 },
     ],
     getValue: (d) => d.country_distribution?.length ?? 0,
+    format: "count",
+    unit: "countries",
   },
   {
     id: "night-owl",
@@ -77,6 +101,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 50 },
     ],
     getValue: (d) => d.late_night_analysis?.pct ?? 0,
+    format: "percent",
+    unit: "",
   },
   {
     id: "streak-master",
@@ -90,6 +116,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 365 },
     ],
     getValue: (d) => d.listening_streaks?.longest_streak ?? 0,
+    format: "count",
+    unit: "days",
     getContext: (_, v) => `${v} consecutive days`,
   },
   {
@@ -104,6 +132,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 5000 },
     ],
     getValue: (d) => d.unique_artists,
+    format: "count",
+    unit: "artists",
   },
   {
     id: "track-explorer",
@@ -117,6 +147,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 20000 },
     ],
     getValue: (d) => d.unique_tracks,
+    format: "count",
+    unit: "tracks",
   },
   {
     id: "marathon-runner",
@@ -133,6 +165,8 @@ const RULES: AchievementRule[] = [
       if (!d.binge_sessions?.length) return 0;
       return Math.max(...d.binge_sessions.map((b) => b.duration_hours));
     },
+    format: "rate",
+    unit: "hours",
     getContext: (_, v) => `${v.toFixed(1)} hour session`,
   },
   {
@@ -151,6 +185,8 @@ const RULES: AchievementRule[] = [
       const { completed, total } = d.completion_distribution;
       return total ? (completed / total) * 100 : 0;
     },
+    format: "percent",
+    unit: "",
   },
   {
     id: "daily-devotee",
@@ -164,6 +200,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 1500 },
     ],
     getValue: (d) => d.statistics_summary?.total_days_active ?? 0,
+    format: "count",
+    unit: "days",
   },
   {
     id: "album-connoisseur",
@@ -177,6 +215,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 3000 },
     ],
     getValue: (d) => d.statistics_summary?.total_unique_albums ?? 0,
+    format: "count",
+    unit: "albums",
   },
   {
     id: "platform-hopper",
@@ -190,6 +230,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 6 },
     ],
     getValue: (d) => d.platform_hours?.length ?? d.platforms?.length ?? 0,
+    format: "count",
+    unit: "platforms",
   },
   {
     id: "diversity-champion",
@@ -203,6 +245,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 0.95 },
     ],
     getValue: (d) => d.diversity_score?.normalized_entropy ?? 0,
+    format: "score",
+    unit: "",
   },
   {
     id: "weekend-warrior",
@@ -216,6 +260,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 1000 },
     ],
     getValue: (d) => d.weekend_vs_weekday?.weekend?.hours ?? 0,
+    format: "count",
+    unit: "weekend hours",
   },
   {
     id: "nostalgia-king",
@@ -229,6 +275,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 50 },
     ],
     getValue: (d) => d.nostalgia_tracks?.length ?? 0,
+    format: "count",
+    unit: "tracks",
   },
   {
     id: "early-bird",
@@ -248,6 +296,8 @@ const RULES: AchievementRule[] = [
       const morningStreams = morning.reduce((s, h) => s + h.streams, 0);
       return total ? (morningStreams / total) * 100 : 0;
     },
+    format: "percent",
+    unit: "",
   },
   {
     id: "shuffle-master",
@@ -261,6 +311,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 90 },
     ],
     getValue: (d) => d.shuffle_pct ?? 0,
+    format: "percent",
+    unit: "",
   },
   {
     id: "offline-listener",
@@ -274,6 +326,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 50 },
     ],
     getValue: (d) => d.offline_pct ?? 0,
+    format: "percent",
+    unit: "",
   },
   {
     id: "year-veteran",
@@ -287,6 +341,8 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 10 },
     ],
     getValue: (d) => d.yearly_stats?.length ?? 0,
+    format: "count",
+    unit: "years",
   },
   {
     id: "heavy-hitter",
@@ -300,9 +356,40 @@ const RULES: AchievementRule[] = [
       { tier: "platinum", target: 8 },
     ],
     getValue: (d) => d.statistics_summary?.avg_daily_hours ?? 0,
+    format: "rate",
+    unit: "hours/day",
     getContext: (_, v) => `${v.toFixed(1)} hours per day`,
   },
 ];
+
+/** Write a rule's raw value the way that rule's numbers read best. */
+function formatValue(value: number, format: ValueFormat): string {
+  switch (format) {
+    case "percent":
+      return `${Math.round(value)}%`;
+    case "score":
+      return value.toFixed(2);
+    case "rate":
+      return value.toFixed(1);
+    default:
+      return Math.round(value).toLocaleString();
+  }
+}
+
+/**
+ * The generic value line, used for every rule that does not write its own.
+ *
+ * Locked badges get "value / target" because the gap is the motivating half of the
+ * information; unlocked ones get the bare figure, since the tier label beside it already
+ * says how far past the threshold the user is. Deriving this from `format` + `unit` beats
+ * hand-writing twenty `getContext`s: a new rule cannot forget to show its number.
+ */
+function defaultContext(rule: AchievementRule, value: number, target: number, unlocked: boolean) {
+  const shown = unlocked
+    ? formatValue(value, rule.format)
+    : `${formatValue(value, rule.format)} / ${formatValue(target, rule.format)}`;
+  return rule.unit ? `${shown} ${rule.unit}` : shown;
+}
 
 export function computeAchievements(data: DashboardData): Achievement[] {
   const achievements: Achievement[] = [];
@@ -326,7 +413,11 @@ export function computeAchievements(data: DashboardData): Achievement[] {
     const nextTier = rule.tiers.find((t) => value < t.target);
     target = nextTier?.target ?? rule.tiers[rule.tiers.length - 1].target;
 
-    const context = rule.getContext?.(data, value);
+    // A rule's own copy is the richer read once the badge is earned ("42 consecutive
+    // days"); while it is locked the generic "value / target" is what the user needs.
+    const context =
+      (unlocked ? rule.getContext?.(data, value) : undefined) ??
+      defaultContext(rule, value, target, unlocked);
 
     achievements.push({
       id: rule.id,

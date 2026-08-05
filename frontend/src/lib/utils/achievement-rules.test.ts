@@ -5,6 +5,7 @@ import {
   country,
   diversity,
   hourly,
+  lateNight,
   makeStats,
   platformHour,
   streaks,
@@ -248,7 +249,12 @@ describe("computeAchievements — ordering", () => {
 });
 
 describe("computeAchievements — context copy", () => {
-  it("adds a human sentence only to the badges that define one", () => {
+  /**
+   * `context` is the only place a badge states its actual number: the face of the card
+   * otherwise shows a tier and a bar, and "Platform Hopper — PLATINUM" never says how
+   * many platforms. So every badge must carry one, earned or not.
+   */
+  it("prefers a rule's own sentence once the badge is earned", () => {
     const achievements = computeAchievements(
       makeStats({
         total_hours: 1234.6,
@@ -260,7 +266,76 @@ describe("computeAchievements — context copy", () => {
     expect(byId(achievements, "century-club").context).toBe("1235 hours of music");
     expect(byId(achievements, "streak-master").context).toBe("42 consecutive days");
     expect(byId(achievements, "heavy-hitter").context).toBe("2.6 hours per day");
-    expect(byId(achievements, "stream-machine").context).toBeUndefined();
+  });
+
+  it("still states a number on the badges that write no sentence of their own", () => {
+    const achievements = computeAchievements(makeStats({ total_streams: 12_345 }));
+
+    // `toLocaleString` rather than a literal, so the suite does not pin a locale.
+    expect(byId(achievements, "stream-machine").context).toBe(
+      `${(12_345).toLocaleString()} streams`,
+    );
+  });
+
+  it("gives every badge a context containing a figure, however sparse the payload", () => {
+    const payloads = [
+      makeStats(),
+      makeStats({ total_hours: 9000, total_streams: 900_000, unique_artists: 6000 }),
+    ];
+
+    for (const payload of payloads) {
+      for (const achievement of computeAchievements(payload)) {
+        expect(achievement.context).toBeTruthy();
+        expect(achievement.context).toMatch(/\d/);
+      }
+    }
+  });
+
+  it("shows a locked badge what it still owes, not just where it stands", () => {
+    const achievements = computeAchievements(
+      makeStats({ platform_hours: [platformHour("android")] }),
+    );
+
+    expect(byId(achievements, "platform-hopper")).toMatchObject({
+      unlocked: false,
+      context: "1 / 2 platforms",
+    });
+  });
+
+  it("drops the target from the line once the badge is earned", () => {
+    const achievements = computeAchievements(
+      makeStats({
+        platform_hours: [platformHour("android"), platformHour("web"), platformHour("ios")],
+      }),
+    );
+
+    expect(byId(achievements, "platform-hopper").context).toBe("3 platforms");
+  });
+
+  it("uses the generic line while a badge with its own sentence is still locked", () => {
+    // The rule's copy reads as a boast; below the threshold the gap is the useful half.
+    const achievements = computeAchievements(makeStats({ total_hours: 45 }));
+
+    expect(byId(achievements, "century-club")).toMatchObject({
+      unlocked: false,
+      context: "45 / 100 hours",
+    });
+  });
+
+  it("writes each kind of value the way that value reads", () => {
+    const achievements = computeAchievements(
+      makeStats({
+        shuffle_pct: 62.4,
+        diversity_score: diversity({ normalized_entropy: 0.88 }),
+        late_night_analysis: lateNight(4),
+      }),
+    );
+
+    // Percentages to whole points; the diversity tiers are 0.05 apart, so that score
+    // keeps two decimals or three of its four tiers print identically.
+    expect(byId(achievements, "shuffle-master").context).toBe("62%");
+    expect(byId(achievements, "diversity-champion").context).toBe("0.88");
+    expect(byId(achievements, "night-owl").context).toBe("4% / 10%");
   });
 
   it("never renders NaN or Infinity in a context string", () => {
@@ -269,7 +344,7 @@ describe("computeAchievements — context copy", () => {
     );
 
     for (const achievement of achievements) {
-      expect(achievement.context ?? "").not.toMatch(/NaN|Infinity/);
+      expect(achievement.context).not.toMatch(/NaN|Infinity/);
     }
   });
 });

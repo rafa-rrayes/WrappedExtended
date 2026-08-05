@@ -761,7 +761,7 @@ export function BarChartRace({
           {/* Header */}
           <div className="mb-12">
             <span className="font-[family-name:var(--font-display)] text-[0.7rem] font-semibold tracking-[0.2em] uppercase text-[#E91E63] mb-2.5 block">
-              ## &mdash; Bar Chart Race
+              Bar Chart Race
             </span>
             <h2 className="font-[family-name:var(--font-display)] text-[clamp(1.8rem,3.5vw,2.8rem)] font-extrabold leading-[1.15]">
               Watch Your <span className="text-green">Favorites</span> Race

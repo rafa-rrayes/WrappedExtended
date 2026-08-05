@@ -28,17 +28,16 @@ def compute_bar_charts(df: pl.DataFrame) -> dict:
             .group_by("artist_name")
             .agg(
                 pl.len().alias("plays"),
-                (pl.col("skipped").is_not_null() & (pl.col("skipped") != 0))
-                .sum()
-                .alias("skips"),
+                (pl.col("skipped").is_not_null() & (pl.col("skipped") != 0)).sum().alias("skips"),
             )
+            # Ranked by the metric the chart is named after, not by volume. The 10-play
+            # floor is what keeps a single skipped one-off from taking the top slot now
+            # that rate, rather than play count, decides the order.
             .filter(pl.col("plays") >= 10)
-            .sort("plays", descending=True)
+            .with_columns((pl.col("skips") / pl.col("plays") * 100).round(1).alias("skip_rate"))
+            .sort("skip_rate", descending=True)
             .head(20)
         )
-        skip_dicts = artist_plays.to_dicts()
-        for d in skip_dicts:
-            d["skip_rate"] = round(d["skips"] / d["plays"] * 100, 1) if d["plays"] else 0
-        stats["skip_rate_by_artist"] = skip_dicts
+        stats["skip_rate_by_artist"] = artist_plays.to_dicts()
 
     return stats
