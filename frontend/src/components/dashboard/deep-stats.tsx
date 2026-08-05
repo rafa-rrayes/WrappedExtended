@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import type { StatisticsSummary, DiversityScore } from "@/types/dashboard";
-import { formatNumber } from "@/lib/utils";
 import { SectionReveal } from "@/components/dashboard/section-reveal";
 import { useAnimatedCounter } from "@/lib/hooks/use-animated-counter";
 

@@ -22,9 +22,9 @@ const PALETTE = ["#1DB954", "#F5A623", "#E91E63", "#9C27B0", "#00BCD4", "#FF5722
 export function SongObsession({ data }: SongObsessionProps) {
   const [hiddenLines, setHiddenLines] = useState<Set<string>>(new Set());
 
-  if (!data?.length) return null;
-
-  const top5 = data.slice(0, 5);
+  // Hooks must run on every render — keep them above the empty-data guard below.
+  // top5 is derived inside a memo so the dep is stable, not a fresh array each render.
+  const top5 = useMemo(() => (data ?? []).slice(0, 5), [data]);
 
   const chartData = useMemo(() => {
     // Collect all months
@@ -43,6 +43,8 @@ export function SongObsession({ data }: SongObsessionProps) {
       return point;
     });
   }, [top5]);
+
+  if (!data?.length) return null;
 
   const formatMonth = (m: string) => {
     const [year, month] = m.split("-");

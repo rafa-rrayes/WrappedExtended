@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReplayStore } from "@/lib/stores/replay";
-import type { DashboardData, CalendarHeatmapEntry, ArtistDiscovery } from "@/types/dashboard";
+import type { DashboardData } from "@/types/dashboard";
 
 interface ReplayOverlayProps {
   data: DashboardData;
@@ -18,12 +18,11 @@ interface Milestone {
 export function ReplayOverlay({ data }: ReplayOverlayProps) {
   const { active, playing, speed, position, setActive, setPlaying, setSpeed, setPosition, reset } = useReplayStore();
   const animRef = useRef<number>(0);
-  const [currentTrack, setCurrentTrack] = useState("");
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [activeMilestone, setActiveMilestone] = useState<Milestone | null>(null);
 
   // Build timeline data
-  const calendarData = data.calendar_heatmap ?? [];
+  const calendarData = useMemo(() => data.calendar_heatmap ?? [], [data.calendar_heatmap]);
   const totalDays = calendarData.length;
 
   useEffect(() => {

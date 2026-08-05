@@ -94,8 +94,7 @@ const LEGEND_COLORS = [
 ];
 
 export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
-  if (!data?.length) return null;
-
+  // Hooks must run on every render — keep them above the empty-data guard below.
   const { grid, max } = useMemo(() => {
     const g: Record<string, Record<number, number>> = {};
     let m = 0;
@@ -103,7 +102,7 @@ export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
       g[day] = {};
       for (let h = 0; h < 24; h++) g[day][h] = 0;
     }
-    for (const entry of data) {
+    for (const entry of data ?? []) {
       const day = entry.weekday;
       if (g[day]) {
         g[day][entry.hour] = entry.hours;
@@ -112,6 +111,8 @@ export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
     }
     return { grid: g, max: m };
   }, [data]);
+
+  if (!data?.length) return null;
 
   return (
     <SectionReveal id="heatmap" className="py-24">

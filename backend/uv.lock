@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -849,7 +849,7 @@ dependencies = [
     { name = "whitenoise" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "ipython" },
     { name = "pytest" },
@@ -866,15 +866,18 @@ requires-dist = [
     { name = "djangorestframework", specifier = ">=3.15,<4" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.3,<6" },
     { name = "gunicorn", specifier = ">=23,<24" },
-    { name = "ipython", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "polars", specifier = ">=1.18,<2" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
-    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.9" },
     { name = "python-decouple", specifier = ">=3.8,<4" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "sentry-sdk", extras = ["django", "celery"], specifier = ">=2.19,<3" },
     { name = "stripe", specifier = ">=14.4.1" },
     { name = "whitenoise", specifier = ">=6.8,<7" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ipython", specifier = ">=8" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-django", specifier = ">=4.9" },
+    { name = "ruff", specifier = ">=0.8" },
+]

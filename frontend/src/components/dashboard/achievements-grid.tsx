@@ -20,7 +20,6 @@ export function AchievementsGrid({ data }: AchievementsGridProps) {
   const [showAll, setShowAll] = useState(false);
 
   const unlocked = achievements.filter((a) => a.unlocked);
-  const locked = achievements.filter((a) => !a.unlocked);
   const displayed = showAll ? achievements : achievements.slice(0, 12);
 
   return (

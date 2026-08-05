@@ -19,7 +19,9 @@ dependencies = [
     "sentry-sdk[django,celery]>=2.19,<3",
 ]
 
-[project.optional-dependencies]
+# Installed by a plain `uv sync`, unlike [project.optional-dependencies] which
+# needs an explicit `--extra dev`. Keeps ruff/pytest present in every dev env.
+[dependency-groups]
 dev = [
     "pytest>=8",
     "pytest-django>=4.9",
@@ -33,6 +35,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Django generates these; reformatting them just creates migration churn.
+"*/migrations/*" = ["E501", "I001"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "wrapex.settings.development"

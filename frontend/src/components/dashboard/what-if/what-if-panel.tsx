@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { useWhatIfStore } from "@/lib/stores/what-if";
 import { recalculateWithout } from "@/lib/utils/what-if-recalculator";
-import type { DashboardData, ArtistStat } from "@/types/dashboard";
+import type { DashboardData } from "@/types/dashboard";
 
 interface WhatIfPanelProps {
   dashboardId: string;
@@ -11,7 +10,9 @@ interface WhatIfPanelProps {
 }
 
 export function WhatIfPanel({ dashboardId, data }: WhatIfPanelProps) {
-  const { open, excludeArtists, loading, result, setOpen, toggleArtist, fetchResult, reset } = useWhatIfStore();
+  // NOTE: the store also holds a server-computed `result` from fetchResult(), but this
+  // panel renders only the client-side `clientResult` below. See tasks/todo.md.
+  const { open, excludeArtists, loading, setOpen, toggleArtist, fetchResult, reset } = useWhatIfStore();
 
   if (!open) return null;
 
