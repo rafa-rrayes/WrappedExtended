@@ -145,6 +145,27 @@ services:
     networks:
       - internal
 
+  # Runs CELERY_BEAT_SCHEDULE (nightly global benchmark percentiles). Without this
+  # the GlobalBenchmark table never fills and every user is compared against the
+  # static fallback values in views_dashboard_features._static_benchmarks().
+  # Keep this at exactly one replica — multiple beats would double-fire the schedule.
+  celery-beat:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: >
+      uv run celery -A wrapex beat --loglevel=info
+      --schedule /tmp/celerybeat-schedule
+    environment:
+      <<: *django-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
 volumes:
   pgdata:
   redis_data:

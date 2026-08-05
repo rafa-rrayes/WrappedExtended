@@ -83,6 +83,25 @@ services:
     volumes:
       - ./backend:/app
 
+  celery-beat:
+    build: ./backend
+    command: uv run celery -A wrapex beat --loglevel=info --schedule /tmp/celerybeat-schedule
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: wrapex.settings.development
+      DB_HOST: postgres
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
   frontend:
     build: ./frontend
     command: pnpm dev --port 3050

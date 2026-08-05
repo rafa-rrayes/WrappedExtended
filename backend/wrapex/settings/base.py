@@ -3,6 +3,7 @@
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -124,6 +125,16 @@ CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://localho
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+# Recompute cross-user percentiles nightly. Without this the GlobalBenchmark table
+# stays empty forever and every user is compared against hardcoded static values.
+# Requires a beat process: `celery -A wrapex beat`.
+CELERY_BEAT_SCHEDULE = {
+    "compute-global-benchmarks": {
+        "task": "processing.tasks.compute_global_benchmarks",
+        "schedule": crontab(hour=4, minute=0),
+    },
+}
 
 # S3 / MinIO
 S3_ENDPOINT_URL = config("S3_ENDPOINT_URL", default="http://localhost:9000")

@@ -31,7 +31,7 @@ SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv())
-SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]  # Allow Railway healthcheck over HTTP
+SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]  # Container healthcheck probes this over HTTP
 
 # Database
 DATABASES["default"]["CONN_MAX_AGE"] = 600  # noqa: F405
@@ -43,7 +43,7 @@ STORAGES = {
     },
 }
 
-# Structured logging for Railway
+# Structured logging to stdout — collected by the container runtime
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
