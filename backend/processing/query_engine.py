@@ -438,7 +438,8 @@ def _companions(scoped: pl.DataFrame, column: str, name: str, exclude: list[str]
     if target_sessions.is_empty():
         return []
 
-    others = sessions.filter(pl.col("session_id").is_in(target_sessions)).filter(
+    # .to_list(): passing a Series to is_in is deprecated as ambiguous in Polars.
+    others = sessions.filter(pl.col("session_id").is_in(target_sessions.to_list())).filter(
         pl.col("artist_name").is_not_null()
     )
     if exclude:

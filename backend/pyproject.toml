@@ -55,5 +55,12 @@ select = ["E", "F", "I", "N", "UP", "B"]
 "*/migrations/*" = ["E501", "I001"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "wrapex.settings.development"
+# wrapex.settings.test swaps Postgres/Redis/MinIO for in-process equivalents, so a bare
+# `uv run pytest` passes with no services running. See that module for the details.
+DJANGO_SETTINGS_MODULE = "wrapex.settings.test"
 python_files = ["tests.py", "test_*.py"]
+testpaths = ["api/tests"]
+addopts = "-ra --strict-markers -m 'not slow'"
+markers = [
+    "slow: model fits that take seconds rather than milliseconds; excluded by default, run with `-m slow`",
+]
