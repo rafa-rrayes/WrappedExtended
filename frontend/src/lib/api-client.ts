@@ -1,6 +1,17 @@
 import type { TokenPair, Upload, UploadStatus, UserProfile, Payment } from "@/types/api";
 import type { AdminAnalytics, AnalyticsRange } from "@/types/admin";
-import type { DashboardDetail, DashboardSummary } from "@/types/dashboard";
+import type {
+  CompareParams,
+  CompareResponse,
+  DashboardDetail,
+  DashboardSummary,
+  EntityDetail,
+  EntityDetailParams,
+  EntityListParams,
+  EntityListResponse,
+  MLComputeResponse,
+  MLResponse,
+} from "@/types/dashboard";
 import { API_BASE_URL } from "./constants";
 
 /** An error carrying the backend's own message, so the UI can show something useful. */
@@ -313,6 +324,81 @@ export const apiClient = {
     const res = await fetchWithAuth(
       `${API_BASE_URL}/dashboards/${dashboardId}/journey/?${searchParams}`,
     );
+    return res.json();
+  },
+
+  // ── Entity browsing ─────────────────────────────────────────────────────
+  //
+  // The library routes (artists / tracks / albums) read the full entity list from
+  // the Parquet rather than the pre-baked top-N in dashboard_data, so they can
+  // paginate, search and re-sort over everything the user ever played.
+
+  async getEntities(
+    dashboardId: string,
+    params: EntityListParams,
+  ): Promise<EntityListResponse> {
+    const searchParams = new URLSearchParams({ type: params.type });
+    if (params.q) searchParams.set("q", params.q);
+    if (params.sort) searchParams.set("sort", params.sort);
+    if (params.order) searchParams.set("order", params.order);
+    if (params.page) searchParams.set("page", String(params.page));
+    if (params.page_size) searchParams.set("page_size", String(params.page_size));
+    if (params.from) searchParams.set("from", params.from);
+    if (params.to) searchParams.set("to", params.to);
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/entities/?${searchParams}`,
+    );
+    return res.json();
+  },
+
+  async getEntityDetail(
+    dashboardId: string,
+    params: EntityDetailParams,
+  ): Promise<EntityDetail> {
+    const searchParams = new URLSearchParams({
+      type: params.type,
+      name: params.name,
+    });
+    if (params.artist) searchParams.set("artist", params.artist);
+    if (params.from) searchParams.set("from", params.from);
+    if (params.to) searchParams.set("to", params.to);
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/entities/detail/?${searchParams}`,
+    );
+    return res.json();
+  },
+
+  // ── Period comparison ───────────────────────────────────────────────────
+
+  async getCompare(dashboardId: string, params: CompareParams): Promise<CompareResponse> {
+    const searchParams = new URLSearchParams({
+      a_start: params.a_start,
+      a_end: params.a_end,
+      b_start: params.b_start,
+      b_end: params.b_end,
+    });
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/dashboards/${dashboardId}/compare/?${searchParams}`,
+    );
+    return res.json();
+  },
+
+  // ── ML insights ─────────────────────────────────────────────────────────
+  //
+  // `getMLInsights` never 404s for a missing model run: it answers with a status
+  // ("pending" while a job is queued, "unavailable" when nothing has been asked
+  // for yet) so the Lab route can poll instead of error-handling.
+
+  async getMLInsights(dashboardId: string): Promise<MLResponse> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/ml/`);
+    return res.json();
+  },
+
+  async computeMLInsights(dashboardId: string): Promise<MLComputeResponse> {
+    const res = await fetchWithAuth(`${API_BASE_URL}/dashboards/${dashboardId}/ml/compute/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
     return res.json();
   },
 };

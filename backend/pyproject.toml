@@ -17,6 +17,20 @@ dependencies = [
     "whitenoise>=6.8,<7",
     "stripe>=14.4.1",
     "sentry-sdk[django,celery]>=2.19,<3",
+    "scikit-learn>=1.5,<2",
+    "statsmodels>=0.14,<1",
+    "pandas>=2.2,<3",
+    "pyarrow>=18",
+]
+
+# Deliberately NOT installed by default: torch alone is >1GB, which we refuse to
+# carry in the web/worker image. `processing/ml/` degrades gracefully without them
+# (the MLP and LSTM report `available: false`, UMAP falls back to t-SNE), so this
+# extra exists only for a dedicated deep-learning worker: `uv sync --extra ml-deep`.
+[project.optional-dependencies]
+ml-deep = [
+    "torch>=2.5",
+    "umap-learn>=0.5",
 ]
 
 # Installed by a plain `uv sync`, unlike [project.optional-dependencies] which
@@ -41,5 +55,12 @@ select = ["E", "F", "I", "N", "UP", "B"]
 "*/migrations/*" = ["E501", "I001"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "wrapex.settings.development"
+# wrapex.settings.test swaps Postgres/Redis/MinIO for in-process equivalents, so a bare
+# `uv run pytest` passes with no services running. See that module for the details.
+DJANGO_SETTINGS_MODULE = "wrapex.settings.test"
 python_files = ["tests.py", "test_*.py"]
+testpaths = ["api/tests"]
+addopts = "-ra --strict-markers -m 'not slow'"
+markers = [
+    "slow: model fits that take seconds rather than milliseconds; excluded by default, run with `-m slow`",
+]

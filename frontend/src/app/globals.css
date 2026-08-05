@@ -12,6 +12,10 @@
   --color-green-glow: rgba(29, 185, 84, 0.3);
   --color-gold: #F5A623;
   --color-gold-dim: rgba(245, 166, 35, 0.12);
+  /* The third semantic colour: a drop, a loss, a destructive action. Same hue the app
+     already reaches for as `red-400`, but named for what it means rather than what it is. */
+  --color-negative: #F87171;
+  --color-negative-dim: rgba(248, 113, 113, 0.12);
   --color-text-primary: #ececec;
   --color-text-secondary: #999999;
   --color-text-muted: #555555;
@@ -35,6 +39,21 @@ body {
   color: var(--color-text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Focus ───────────────────────────────────────────────────────────────── */
+/*
+ * One keyboard-only focus ring for the entire app.
+ *
+ * Nothing in `src/components` shipped a focus style of its own, and several inputs set
+ * `outline-none` with nothing in its place — so a keyboard user had no way to tell where
+ * they were. `:focus-visible` keeps the ring off mouse clicks, and this rule sits after
+ * the Tailwind import so it also wins against those `outline-none` utilities on equal
+ * specificity. Components that want something richer can still layer a ring on top.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-green);
+  outline-offset: 2px;
 }
 
 /* Noise overlay */

@@ -4,11 +4,15 @@ import logging
 
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from .models import GlobalBenchmark, ProcessedDashboard
 from .serializers_features import (
     ChartBuilderSerializer,
+    ComparePeriodsSerializer,
+    EntityBrowseSerializer,
+    EntityDetailSerializer,
     JourneySerializer,
     SearchEntitySerializer,
     TimeMachineSerializer,
@@ -19,7 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 class DashboardFeatureMixin:
-    """Shared logic for loading dashboard + Parquet DataFrame."""
+    """Shared logic for loading dashboard + Parquet DataFrame.
+
+    Every view using this mixin deserializes a whole user Parquet into memory, so they all
+    share the `dashboard_query` throttle bucket on top of the usual per-user rate.
+    """
+
+    throttle_scope = "dashboard_query"
+    throttle_classes = (UserRateThrottle, ScopedRateThrottle)
 
     def get_dashboard(self, request, dashboard_id):
         try:
@@ -33,6 +44,12 @@ class DashboardFeatureMixin:
         from processing.query_engine import load_dataframe
 
         return load_dataframe(dashboard.parquet_key)
+
+    def parquet_unavailable(self):
+        return Response(
+            {"detail": "Parquet data not available. Re-upload to enable this feature."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class TimeMachineView(DashboardFeatureMixin, APIView):
@@ -174,10 +191,7 @@ class BenchmarksView(APIView):
         except ProcessedDashboard.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        benchmarks = {
-            b.metric: b.percentiles
-            for b in GlobalBenchmark.objects.all()
-        }
+        benchmarks = {b.metric: b.percentiles for b in GlobalBenchmark.objects.all()}
 
         if not benchmarks:
             # Static fallbacks based on public Spotify averages
@@ -202,10 +216,12 @@ class BenchmarksView(APIView):
                     "benchmarks": pcts,
                 }
 
-        return Response({
-            "comparisons": comparisons,
-            "has_real_data": bool(GlobalBenchmark.objects.exists()),
-        })
+        return Response(
+            {
+                "comparisons": comparisons,
+                "has_real_data": bool(GlobalBenchmark.objects.exists()),
+            }
+        )
 
 
 class JourneyView(DashboardFeatureMixin, APIView):
@@ -236,24 +252,135 @@ class JourneyView(DashboardFeatureMixin, APIView):
         return Response(result)
 
 
+class EntityBrowseView(DashboardFeatureMixin, APIView):
+    """Paginated, sortable, searchable library of every artist / track / album."""
+
+    def get(self, request, dashboard_id):
+        dashboard = self.get_dashboard(request, dashboard_id)
+        if not dashboard:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = EntityBrowseSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        df = self.load_df(dashboard)
+        if df is None:
+            return self.parquet_unavailable()
+
+        from processing.query_engine import browse_entities
+
+        result = browse_entities(
+            df,
+            entity_type=data["type"],
+            q=(data.get("q") or "").strip() or None,
+            sort=data["sort"],
+            order=data["order"],
+            page=data["page"],
+            page_size=data["page_size"],
+            start=data.get("from"),
+            end=data.get("to"),
+        )
+        return Response(result)
+
+
+class EntityDetailView(DashboardFeatureMixin, APIView):
+    """Full micro-dashboard for a single artist / track / album."""
+
+    def get(self, request, dashboard_id):
+        dashboard = self.get_dashboard(request, dashboard_id)
+        if not dashboard:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = EntityDetailSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        df = self.load_df(dashboard)
+        if df is None:
+            return self.parquet_unavailable()
+
+        from processing.query_engine import entity_detail
+
+        result = entity_detail(
+            df,
+            entity_type=data["type"],
+            name=data["name"],
+            start=data.get("from"),
+            end=data.get("to"),
+            artist=data.get("artist") or None,
+        )
+        if not result:
+            return Response({"detail": "Entity not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
+
+
+class ComparePeriodsView(DashboardFeatureMixin, APIView):
+    """Side-by-side stats for two date ranges, plus the deltas between them."""
+
+    def get(self, request, dashboard_id):
+        dashboard = self.get_dashboard(request, dashboard_id)
+        if not dashboard:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ComparePeriodsSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        df = self.load_df(dashboard)
+        if df is None:
+            return self.parquet_unavailable()
+
+        from processing.query_engine import compare_periods
+
+        result = compare_periods(
+            df,
+            a_start=str(data["a_start"]),
+            a_end=str(data["a_end"]),
+            b_start=str(data["b_start"]),
+            b_end=str(data["b_end"]),
+        )
+        return Response(result)
+
+
 def _static_benchmarks():
     """Fallback benchmarks based on general Spotify usage data."""
     return {
         "total_hours": {
-            "p10": 50, "p25": 150, "p50": 400, "p75": 800,
-            "p90": 1500, "p95": 2500, "p99": 5000,
+            "p10": 50,
+            "p25": 150,
+            "p50": 400,
+            "p75": 800,
+            "p90": 1500,
+            "p95": 2500,
+            "p99": 5000,
         },
         "total_streams": {
-            "p10": 2000, "p25": 5000, "p50": 15000, "p75": 35000,
-            "p90": 70000, "p95": 120000, "p99": 250000,
+            "p10": 2000,
+            "p25": 5000,
+            "p50": 15000,
+            "p75": 35000,
+            "p90": 70000,
+            "p95": 120000,
+            "p99": 250000,
         },
         "unique_artists": {
-            "p10": 50, "p25": 150, "p50": 500, "p75": 1200,
-            "p90": 2500, "p95": 4000, "p99": 8000,
+            "p10": 50,
+            "p25": 150,
+            "p50": 500,
+            "p75": 1200,
+            "p90": 2500,
+            "p95": 4000,
+            "p99": 8000,
         },
         "unique_tracks": {
-            "p10": 200, "p25": 600, "p50": 2000, "p75": 5000,
-            "p90": 10000, "p95": 18000, "p99": 35000,
+            "p10": 200,
+            "p25": 600,
+            "p50": 2000,
+            "p75": 5000,
+            "p90": 10000,
+            "p95": 18000,
+            "p99": 35000,
         },
     }
 

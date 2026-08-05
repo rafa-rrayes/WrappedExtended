@@ -17,8 +17,12 @@ def compute_core_stats(df: pl.DataFrame) -> dict:
     stats["total_hours"] = round(df["hours_played"].sum(), 2)
     stats["unique_artists"] = df["artist_name"].drop_nulls().n_unique()
     stats["unique_tracks"] = df["track_name"].drop_nulls().n_unique()
-    stats["date_range_start"] = str(df["date"].min())
-    stats["date_range_end"] = str(df["date"].max())
+    # str() on an empty column yields the literal "None", which serializes into the API
+    # response as a string and renders as a date. A filtered range matching zero rows is
+    # ordinary (Time Machine, /compare), so this has to be a real null.
+    date_min, date_max = df["date"].min(), df["date"].max()
+    stats["date_range_start"] = str(date_min) if date_min is not None else None
+    stats["date_range_end"] = str(date_max) if date_max is not None else None
 
     # ── Top artists ───────────────────────────────────────────────────────────
     top_artists = (
@@ -113,9 +117,7 @@ def compute_core_stats(df: pl.DataFrame) -> dict:
         stats["shuffle_pct"] = round(shuffle_on / total * 100, 1) if total else 0
 
     if has_column(df, "skipped"):
-        skipped = df.filter(
-            pl.col("skipped").is_not_null() & (pl.col("skipped") != 0)
-        ).height
+        skipped = df.filter(pl.col("skipped").is_not_null() & (pl.col("skipped") != 0)).height
         stats["skip_pct"] = round(skipped / total * 100, 1) if total else 0
 
     if has_column(df, "offline"):

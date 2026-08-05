@@ -29,15 +29,20 @@ import { MoodTimeline } from "@/components/dashboard/mood-timeline";
 import { BarChartRace } from "@/components/dashboard/bar-chart-race";
 import { SocialBenchmarks } from "@/components/dashboard/social-benchmarks";
 import { SearchBar } from "@/components/dashboard/search/search-bar";
-import { ChartBuilderModal } from "@/components/dashboard/chart-builder/chart-builder-modal";
-import { WhatIfPanel } from "@/components/dashboard/what-if/what-if-panel";
-import { WidgetExportModal } from "@/components/dashboard/widgets/widget-export";
 import { TimeMachineToolbar } from "@/components/dashboard/time-machine/time-machine-toolbar";
-import { ReplayOverlay } from "@/components/dashboard/replay/replay-overlay";
 import { useTimeMachineStore } from "@/lib/stores/time-machine";
-import { useChartBuilderStore } from "@/lib/stores/chart-builder";
-import { useWhatIfStore } from "@/lib/stores/what-if";
-import { useReplayStore } from "@/lib/stores/replay";
+
+/**
+ * The single-scroll "Wrapped story".
+ *
+ * Three surfaces render this: `/dashboard/{id}/story` (authenticated, with the share and
+ * export panels) and `/shared/{slug}` + `/demo` (public, read-only). The public routes
+ * live outside the dashboard layout, so this component must keep taking its data as a
+ * prop — it can never read the dashboard context.
+ *
+ * The interactive tools that used to float over this scroll (chart builder, what-if,
+ * journey replay) now live on `/dashboard/{id}/lab` as a real page.
+ */
 
 interface DashboardContentProps {
   data: DashboardDetail;
@@ -51,9 +56,6 @@ export function DashboardContent({
   onUpdate,
 }: DashboardContentProps) {
   const timeMachine = useTimeMachineStore();
-  const chartBuilder = useChartBuilderStore();
-  const whatIf = useWhatIfStore();
-  const replay = useReplayStore();
 
   // Use time-machine filtered data when active, otherwise base data
   const stats = timeMachine.active && timeMachine.filteredData
@@ -192,48 +194,6 @@ export function DashboardContent({
           <div data-section="your-wrapped"><YourWrapped data={stats.wrapped_summaries ?? {}} /></div>
         </div>
       </div>
-
-      {/* Interactive feature overlays — authenticated only */}
-      {isAuthenticated && (
-        <>
-          <ChartBuilderModal dashboardId={data.id} />
-          <WhatIfPanel dashboardId={data.id} data={stats} />
-          <WidgetExportModal />
-          <ReplayOverlay data={stats} />
-
-          {/* FAB buttons */}
-          <div className="fixed bottom-6 right-6 z-[1000] flex flex-col gap-3">
-            <button
-              onClick={() => replay.setActive(true)}
-              className="w-12 h-12 rounded-full bg-bg-card border border-border shadow-lg flex items-center justify-center text-text-muted hover:text-green hover:border-green transition-colors"
-              title="Journey Replay"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="5 3 19 12 5 21" />
-              </svg>
-            </button>
-            <button
-              onClick={() => whatIf.setOpen(true)}
-              className="w-12 h-12 rounded-full bg-bg-card border border-border shadow-lg flex items-center justify-center text-text-muted hover:text-gold hover:border-gold transition-colors"
-              title="What If...?"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m15 4-1 8h6l-9 12 1-8H6z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => chartBuilder.setOpen(true)}
-              className="w-12 h-12 rounded-full bg-green shadow-lg flex items-center justify-center text-black hover:bg-green/80 transition-colors"
-              title="Chart Builder"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 3v18h18" />
-                <path d="M7 16l4-8 4 4 6-10" />
-              </svg>
-            </button>
-          </div>
-        </>
-      )}
     </>
   );
 }

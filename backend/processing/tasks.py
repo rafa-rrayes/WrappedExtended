@@ -47,6 +47,68 @@ def process_upload(self, upload_id: str) -> dict:
         raise self.retry(exc=exc) from exc
 
 
+@shared_task(
+    # ML is CPU-bound (SVD, KMeans, gradient boosting, t-SNE) and deliberately runs off
+    # the upload pipeline, so it gets a longer leash than process_upload.
+    soft_time_limit=1800,
+    time_limit=1860,
+    # No retry: a rerun costs minutes of CPU, and every failure mode worth retrying
+    # (missing Parquet, degenerate history) is deterministic. The row records why.
+    max_retries=0,
+)
+def compute_ml_insights(dashboard_id: str) -> dict:
+    """Run the ML suite for one dashboard and store the payload on its MLInsight row.
+
+    Idempotent: re-running recomputes from the same Parquet and overwrites the row.
+    """
+    import traceback
+
+    from api.models import MLInsight, ProcessedDashboard
+
+    logger.info("Computing ML insights for dashboard %s", dashboard_id)
+
+    try:
+        dashboard = ProcessedDashboard.objects.get(id=dashboard_id)
+    except ProcessedDashboard.DoesNotExist:
+        logger.warning("ML insights requested for missing dashboard %s", dashboard_id)
+        return {"status": "failed", "dashboard_id": dashboard_id, "error": "dashboard not found"}
+
+    insight, _ = MLInsight.objects.get_or_create(dashboard=dashboard)
+
+    def _fail(message: str) -> dict:
+        MLInsight.objects.filter(pk=insight.pk).update(
+            status=MLInsight.Status.FAILED,
+            error_message=message[:4000],
+        )
+        return {"status": "failed", "dashboard_id": dashboard_id, "error": message[:500]}
+
+    if not dashboard.parquet_key:
+        logger.warning("Dashboard %s has no Parquet — cannot compute ML insights", dashboard_id)
+        return _fail("Parquet data not available for this dashboard. Re-upload to enable ML.")
+
+    MLInsight.objects.filter(pk=insight.pk).update(
+        status=MLInsight.Status.PENDING, error_message=""
+    )
+
+    try:
+        from processing.ml import run_ml_insights
+        from processing.query_engine import load_dataframe
+
+        df = load_dataframe(dashboard.parquet_key)
+        insights = run_ml_insights(df)
+    except Exception:
+        logger.exception("ML insights failed for dashboard %s", dashboard_id)
+        return _fail(traceback.format_exc())
+
+    MLInsight.objects.filter(pk=insight.pk).update(
+        status=MLInsight.Status.READY,
+        insights=insights,
+        error_message="",
+    )
+    logger.info("ML insights ready for dashboard %s", dashboard_id)
+    return {"status": "ready", "dashboard_id": dashboard_id}
+
+
 @shared_task
 def compute_global_benchmarks():
     """Compute cross-user percentile benchmarks for social comparison.
