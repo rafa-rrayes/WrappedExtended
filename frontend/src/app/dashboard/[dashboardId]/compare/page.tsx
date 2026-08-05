@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { ComparePage } from "@/components/dashboard/compare/compare-page";
 import { CompareSkeleton } from "@/components/dashboard/compare/compare-states";
+import { ViewPage } from "@/components/dashboard/views/view-shell";
 
 /**
  * `/dashboard/[dashboardId]/compare`
@@ -14,9 +15,9 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-5 sm:py-8">
+        <ViewPage>
           <CompareSkeleton />
-        </div>
+        </ViewPage>
       }
     >
       <ComparePage />

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { DashboardData } from "@/types/dashboard";
 import { formatHours } from "@/lib/utils";
+import { CompareTooltip, CompareTooltipRow } from "./compare-tooltip";
 import { formatMonthBucket, PERIOD_A_COLOR, PERIOD_B_COLOR } from "./period-format";
 
 interface OverlayRow {
@@ -79,13 +80,13 @@ export function TemporalOverlay({
             dataKey="index"
             tickFormatter={(value: number) => `M${value}`}
             interval={tickInterval}
-            tick={{ fontSize: 11, fill: "#555" }}
+            tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
             tickFormatter={(value: number) => `${Math.round(value)}h`}
-            tick={{ fontSize: 11, fill: "#555" }}
+            tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
             axisLine={false}
             tickLine={false}
             width={45}
@@ -140,43 +141,19 @@ function OverlayTooltip({
   if (!active || !row) return null;
 
   return (
-    <div className="rounded-lg border border-green/30 bg-black/90 px-3 py-2 text-xs shadow-2xl">
-      <div className="mb-1 font-semibold text-text-primary">Month {row.index}</div>
-      <TooltipRow
+    <CompareTooltip title={`Month ${row.index}`}>
+      <CompareTooltipRow
         color={PERIOD_A_COLOR}
         label={labelA}
-        month={row.monthA}
-        hours={row.a}
+        detail={row.monthA ? formatMonthBucket(row.monthA) : "—"}
+        value={row.a === null ? "no data" : formatHours(row.a)}
       />
-      <TooltipRow
+      <CompareTooltipRow
         color={PERIOD_B_COLOR}
         label={labelB}
-        month={row.monthB}
-        hours={row.b}
+        detail={row.monthB ? formatMonthBucket(row.monthB) : "—"}
+        value={row.b === null ? "no data" : formatHours(row.b)}
       />
-    </div>
-  );
-}
-
-function TooltipRow({
-  color,
-  label,
-  month,
-  hours,
-}: {
-  color: string;
-  label: string;
-  month: string | null;
-  hours: number | null;
-}) {
-  return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span className="h-2 w-2 rounded-full" style={{ background: color }} aria-hidden="true" />
-      <span className="text-text-muted">{label}</span>
-      <span className="text-text-secondary">{month ? formatMonthBucket(month) : "—"}</span>
-      <span className="ml-auto pl-2 font-semibold text-text-primary">
-        {hours === null ? "no data" : formatHours(hours)}
-      </span>
-    </div>
+    </CompareTooltip>
   );
 }

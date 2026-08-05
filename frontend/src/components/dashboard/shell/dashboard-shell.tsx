@@ -64,6 +64,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     return (
       <ShellError
         message={error instanceof ApiError ? error.message : undefined}
+        status={error instanceof ApiError ? error.status : undefined}
         onRetry={refresh}
       />
     );

@@ -67,7 +67,9 @@ export function PeriodSelector({
         </>
       )}
 
-      <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+      {/* `minmax(0,1fr)` rather than `1fr`: a grid track defaults to `min-width:auto`, so a
+          long period label inside would refuse to shrink and push the row off-screen. */}
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
         <PeriodEditor
           slot="A"
           period={a}
@@ -149,7 +151,7 @@ function PeriodEditor({
         <span className="text-[0.6rem] font-medium uppercase tracking-[0.14em] text-text-muted">
           Period {slot}
         </span>
-        <span className="ml-auto truncate font-[family-name:var(--font-display)] text-sm font-bold text-text-primary">
+        <span className="ml-auto min-w-0 truncate font-[family-name:var(--font-display)] text-sm font-bold text-text-primary">
           {formatPeriodLabel(period)}
         </span>
       </div>

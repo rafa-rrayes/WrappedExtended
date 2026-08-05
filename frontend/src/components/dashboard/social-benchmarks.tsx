@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/lib/constants";
+import { ApiError, apiClient } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface BenchmarkComparison {
   value: number;
@@ -27,32 +28,67 @@ const METRIC_LABELS: Record<string, { label: string; format: (v: number) => stri
 
 export function SocialBenchmarks({ dashboardId }: SocialBenchmarksProps) {
   const [data, setData] = useState<BenchmarksData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+    let cancelled = false;
+    setData(null);
+    setError(null);
 
-    fetch(`${API_BASE_URL}/dashboards/${dashboardId}/benchmarks/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setData(d))
-      .catch(() => {});
+    // Goes through `apiClient` rather than a bare `fetch`: it carries the access token,
+    // refreshes it when it has expired, and throws an `ApiError` we can actually show —
+    // where the old hand-rolled call silently rendered nothing on any failure.
+    apiClient
+      .getBenchmarks(dashboardId)
+      .then((result: BenchmarksData) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Couldn't reach the benchmarks service.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [dashboardId]);
 
-  if (!data) return null;
+  const comparisons = data ? Object.entries(data.comparisons ?? {}) : [];
+
+  if (error || (data && comparisons.length === 0)) {
+    return (
+      <section id="benchmarks" className="py-10">
+        <BenchmarksHeading />
+        <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-bg-card/40 px-6 py-8 text-center text-sm text-text-muted">
+          {error ?? "There aren't enough other listeners yet to compare you against."}
+        </div>
+      </section>
+    );
+  }
+
+  if (!data) {
+    return (
+      <section id="benchmarks" className="py-10" aria-busy="true">
+        <BenchmarksHeading />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-[132px] rounded-[var(--radius-card)]" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="benchmarks" className="py-10">
-      <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary mb-1">
-        How You Compare
-      </h2>
-      <p className="text-text-muted text-sm mb-8">
-        Your stats vs other listeners{!data.has_real_data && " (estimated benchmarks)"}
-      </p>
+      <BenchmarksHeading estimated={!data.has_real_data} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {Object.entries(data.comparisons).map(([metric, comp]) => {
+        {comparisons.map(([metric, comp]) => {
           const meta = METRIC_LABELS[metric];
           if (!meta) return null;
           return (
@@ -94,5 +130,19 @@ export function SocialBenchmarks({ dashboardId }: SocialBenchmarksProps) {
         })}
       </div>
     </section>
+  );
+}
+
+/** One heading for all four states, so the section never jumps as it resolves. */
+function BenchmarksHeading({ estimated }: { estimated?: boolean }) {
+  return (
+    <>
+      <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary mb-1">
+        How You Compare
+      </h2>
+      <p className="text-text-muted text-sm mb-8">
+        Your stats vs other listeners{estimated && " (estimated benchmarks)"}
+      </p>
+    </>
   );
 }

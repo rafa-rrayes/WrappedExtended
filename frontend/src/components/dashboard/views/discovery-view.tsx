@@ -10,7 +10,7 @@ import { SocialBenchmarks } from "@/components/dashboard/social-benchmarks";
 import { YourWrapped } from "@/components/dashboard/your-wrapped";
 import { useDashboardContext } from "@/components/dashboard/shell/dashboard-context";
 import { ScopeNotice, ViewHeader, ViewPage } from "./view-shell";
-import { SectionSkeleton, ViewSection, hasAnyStat, hasStat } from "./view-section";
+import { EmptySection, SectionSkeleton, ViewSection, hasAnyStat, hasStat } from "./view-section";
 import { useScopedStats } from "./use-scoped-stats";
 
 export function DiscoveryView() {
@@ -66,8 +66,20 @@ export function DiscoveryView() {
             <MoodTimeline data={stats.mood_timeline ?? []} />
           </ViewSection>
 
-          <PersonalityProfile data={stats} />
-          <AchievementsGrid data={stats} />
+          {/* Derived from the payload as a whole rather than from one `stats.*` field, so
+              the guard is "was anything played at all" — on an empty range both would
+              otherwise render a full radar and a full trophy grid pinned to zero. */}
+          {(stats.total_streams ?? 0) > 0 ? (
+            <>
+              <PersonalityProfile data={stats} />
+              <AchievementsGrid data={stats} />
+            </>
+          ) : (
+            <EmptySection
+              title="Personality & achievements"
+              note="Both are calculated from your play totals, and there are no plays in this range."
+            />
+          )}
 
           <SocialBenchmarks dashboardId={dashboardId} />
 

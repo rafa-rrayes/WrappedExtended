@@ -140,7 +140,10 @@ export function formatDay(iso: string | null | undefined): string {
 export function formatMonthShort(month: string): string {
   const [year, monthNumber] = month.slice(0, 7).split("-");
   const index = Number(monthNumber) - 1;
-  if (!year || index < 0 || index > 11) return month;
+  // `Number.isInteger` carries the guard: an input with no "-" leaves `monthNumber`
+  // undefined, and every `<`/`>` comparison against the resulting NaN is false, so a
+  // range check alone lets it through and interpolates the literal string "undefined".
+  if (!year || !Number.isInteger(index) || index < 0 || index > 11) return month;
   return `${MONTH_NAMES[index]} '${year.slice(2)}`;
 }
 
@@ -162,7 +165,8 @@ export function formatMonthLong(month: string): string {
     "November",
     "December",
   ];
-  if (!year || index < 0 || index > 11) return month;
+  // Same NaN guard as `formatMonthShort` — see the note there.
+  if (!year || !Number.isInteger(index) || index < 0 || index > 11) return month;
   return `${long[index]} ${year}`;
 }
 

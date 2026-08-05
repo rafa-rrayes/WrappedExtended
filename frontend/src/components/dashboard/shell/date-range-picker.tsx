@@ -50,6 +50,9 @@ export function DateRangePicker({ bounds }: { bounds: DateRangeBounds }) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
+        // The visible text is only the value ("All time", "2024") — a screen reader needs
+        // to be told what that value is *of*.
+        aria-label={`Date range: ${activePreset?.label ?? label}`}
         className={cn(
           "flex items-center gap-2 rounded-[var(--radius-sm)] border px-3 py-1.5 text-xs transition-colors",
           isFiltered
@@ -66,11 +69,16 @@ export function DateRangePicker({ bounds }: { bounds: DateRangeBounds }) {
           strokeWidth="1.8"
           strokeLinecap="round"
           className="shrink-0"
+          aria-hidden="true"
         >
           <rect x="3" y="5" width="18" height="16" rx="2" />
           <path d="M3 10h18M8 3v4M16 3v4" />
         </svg>
-        <span className="max-w-[190px] truncate">{activePreset?.label ?? label}</span>
+        {/* A full custom range is ~24 characters. Capping it below `sm` leaves the
+            dashboard title in the same bar something to truncate into. */}
+        <span className="max-w-[6.5rem] truncate sm:max-w-[190px]">
+          {activePreset?.label ?? label}
+        </span>
       </button>
 
       <AnimatePresence>

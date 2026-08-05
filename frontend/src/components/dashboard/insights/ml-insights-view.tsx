@@ -2,6 +2,8 @@
 
 import type { MLInsights } from "@/types/dashboard";
 import { formatHours, formatNumber } from "@/lib/utils";
+import { useDateRange } from "@/lib/hooks/use-date-range";
+import { ScopeIgnoredNotice, ViewHeader } from "@/components/dashboard/views/view-shell";
 import { MlPanel, MlStat, formatPercent } from "./ml-primitives";
 import { TasteMapSection } from "./taste-map-section";
 import { ListeningModesSection } from "./listening-modes-section";
@@ -47,44 +49,51 @@ export function MlInsightsView({
 }) {
   const summary = insights.summary;
   const busy = isRerunning || Boolean(isRunning);
+  // The models are fitted server-side against the whole export; there is no filtered
+  // variant to fetch. Say so rather than let the top-bar picker look broken.
+  const { isFiltered } = useDateRange();
 
   return (
     <div className="space-y-12">
-      <header>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <span className="mb-1.5 block font-[family-name:var(--font-display)] text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-green">
-              Insights
-            </span>
-            <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold text-text-primary sm:text-3xl">
-              What the models found
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-              Five models trained on your history — where your taste clusters, how you listen,
-              what makes you skip, and where it&apos;s all heading.
-            </p>
-          </div>
-          <div className="text-right">
-            <button
-              type="button"
-              onClick={onRerun}
-              disabled={busy}
-              className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-text-muted hover:text-text-primary disabled:opacity-50"
-            >
-              {isRunning ? "Analysis running…" : isRerunning ? "Starting…" : "Re-run analysis"}
-            </button>
-            {rerunError ? (
-              <p className="mt-2 max-w-[220px] text-xs text-gold" role="alert">
-                {rerunError}
-              </p>
-            ) : null}
-          </div>
-        </div>
+      <div>
+        <ViewHeader
+          eyebrow="Insights"
+          title={
+            <>
+              What the <span className="text-gold">models</span> found
+            </>
+          }
+          description="Five models trained on your history — where your taste clusters, how you listen, what makes you skip, and where it's all heading."
+          actions={
+            <>
+              <ScopeIgnoredNotice
+                isFiltered={isFiltered}
+                title="The models are trained once against your full history, so a date filter can't be applied to their output."
+              >
+                Date filter not applied
+              </ScopeIgnoredNotice>
+              <button
+                type="button"
+                onClick={onRerun}
+                disabled={busy}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-text-muted hover:text-text-primary disabled:opacity-50"
+              >
+                {isRunning ? "Analysis running…" : isRerunning ? "Starting…" : "Re-run analysis"}
+              </button>
+            </>
+          }
+        />
 
-        {notice ? <div className="mt-5">{notice}</div> : null}
+        {rerunError ? (
+          <p className="-mt-2 mb-5 text-sm text-gold" role="alert">
+            {rerunError}
+          </p>
+        ) : null}
+
+        {notice ? <div className="mb-5">{notice}</div> : null}
 
         {summary ? (
-          <MlPanel className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <MlPanel className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <MlStat
               label="Plays analysed"
               value={formatNumber(summary.rows ?? 0)}
@@ -116,7 +125,7 @@ export function MlInsightsView({
             </a>
           ))}
         </nav>
-      </header>
+      </div>
 
       <TasteMapSection dashboardId={dashboardId} embeddings={insights.embeddings} />
       <ListeningModesSection clustering={insights.clustering} />

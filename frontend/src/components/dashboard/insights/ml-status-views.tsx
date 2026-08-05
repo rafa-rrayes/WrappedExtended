@@ -252,15 +252,48 @@ export function MlNotice({
   );
 }
 
+/**
+ * The first fetch, before `status` is known.
+ *
+ * Shaped like `MlInsightsView` rather than like a generic loader — same `ViewHeader` block,
+ * same six-up summary panel, same pill row, then the taste map and the sections under it —
+ * so the moment the payload lands nothing on screen moves.
+ */
 export function MlLoadState() {
   return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Skeleton className="h-56 rounded-[var(--radius-card)]" />
-        <Skeleton className="h-56 rounded-[var(--radius-card)]" />
+    <div className="space-y-12" role="status" aria-label="Loading insights">
+      <div aria-hidden="true">
+        <div className="mb-6 border-b border-border pb-6">
+          <Skeleton className="mb-2 h-3 w-20" />
+          <Skeleton className="h-9 w-80 max-w-full" />
+          <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 rounded-[var(--radius-card)] border border-border bg-bg-card p-5 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="h-2.5 w-16" />
+              <Skeleton className="mt-2 h-6 w-20" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex gap-1.5 overflow-hidden">
+          {[76, 108, 88, 74, 84, 92].map((width, index) => (
+            <Skeleton key={index} className="h-7 shrink-0 rounded-full" style={{ width }} />
+          ))}
+        </div>
       </div>
+
+      <div className="space-y-12" aria-hidden="true">
+        <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-56 rounded-[var(--radius-card)]" />
+          <Skeleton className="h-56 rounded-[var(--radius-card)]" />
+        </div>
+      </div>
+
+      <span className="sr-only">Loading your insights…</span>
     </div>
   );
 }

@@ -10,7 +10,8 @@ import { useWhatIfStore } from "@/lib/stores/what-if";
 import { useReplayStore } from "@/lib/stores/replay";
 import { recalculateWithout } from "@/lib/utils/what-if-recalculator";
 import { formatHours } from "@/lib/utils";
-import { ViewHeader, ViewPage } from "./view-shell";
+import { useDateRange } from "@/lib/hooks/use-date-range";
+import { ScopeIgnoredNotice, ViewHeader, ViewPage } from "./view-shell";
 import { EmptySection, hasStat } from "./view-section";
 
 /**
@@ -46,6 +47,9 @@ export function LabView() {
   const chartBuilder = useChartBuilderStore();
   const whatIf = useWhatIfStore();
   const replay = useReplayStore();
+  // Each tool queries the engine (or the full stats blob) on its own terms — the chart
+  // builder even has its own range control — so the top-bar filter is not applied here.
+  const { isFiltered } = useDateRange();
 
   // Leaving the page should not leave a tool half-open waiting behind the next route.
   useEffect(() => {
@@ -72,6 +76,14 @@ export function LabView() {
           </>
         }
         description="Three tools that go past the pre-computed charts: build a chart from any metric, remove artists to see what's left, and replay the whole thing day by day."
+        actions={
+          <ScopeIgnoredNotice
+            isFiltered={isFiltered}
+            title="Each tool runs against your full history and carries its own controls, so the top-bar date filter is left out of it."
+          >
+            Date filter not applied
+          </ScopeIgnoredNotice>
+        }
       />
 
       <div className="space-y-4">

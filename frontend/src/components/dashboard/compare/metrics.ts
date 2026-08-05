@@ -107,7 +107,18 @@ export function deltaTone(meta: MetricMeta, delta: CompareDelta): Tone {
   return roseAndRisingIsGood || fellAndFallingIsGood ? "positive" : "negative";
 }
 
+/**
+ * What we print when a number isn't one.
+ *
+ * `delta.pct` is null by contract whenever period A is zero, but a division that went
+ * through anyway — or a truncated payload — can still hand us a NaN or an Infinity. Every
+ * one of those renders as this em dash: "+Infinity%" and "NaN%" are worse than admitting
+ * the figure is undefined, and they are the two strings this module must never emit.
+ */
+const UNDEFINED_CHANGE = "—";
+
 export function formatMetricValue(meta: MetricMeta, value: number): string {
+  if (!Number.isFinite(value)) return UNDEFINED_CHANGE;
   if (meta.unit === "hours") return formatHours(value);
   if (meta.unit === "percent") return `${value.toFixed(1)}%`;
   return formatNumber(Math.round(value));
@@ -142,23 +153,28 @@ export interface ChangeDisplay {
  * `pct` is null whenever A is zero, and then we show "—" rather than an infinity.
  */
 export function formatMetricChange(meta: MetricMeta, delta: CompareDelta): ChangeDisplay {
+  // A non-finite figure is folded into the same "we don't have this" case as the
+  // backend's explicit null, so neither branch below can ever format one.
+  const pct = Number.isFinite(delta.pct) ? (delta.pct as number) : null;
+  const abs = Number.isFinite(delta.abs) ? delta.abs : null;
+
   if (meta.unit === "percent") {
     return {
-      primary: `${signed(delta.abs, 1)} pp`,
-      secondary: delta.pct === null ? null : `${signed(delta.pct, 0)}% relative`,
+      primary: abs === null ? UNDEFINED_CHANGE : `${signed(abs, 1)} pp`,
+      secondary: pct === null ? null : `${signed(pct, 0)}% relative`,
     };
   }
 
-  if (delta.pct === null) {
+  if (pct === null) {
     return {
-      primary: "—",
-      secondary: signedAmount(meta, delta.abs),
+      primary: UNDEFINED_CHANGE,
+      secondary: abs === null ? null : signedAmount(meta, abs),
       title: `No ${meta.label.toLowerCase()} in period A, so a percentage change is undefined.`,
     };
   }
 
   return {
-    primary: `${signed(delta.pct, Math.abs(delta.pct) >= 10 ? 0 : 1)}%`,
-    secondary: signedAmount(meta, delta.abs),
+    primary: `${signed(pct, Math.abs(pct) >= 10 ? 0 : 1)}%`,
+    secondary: abs === null ? null : signedAmount(meta, abs),
   };
 }

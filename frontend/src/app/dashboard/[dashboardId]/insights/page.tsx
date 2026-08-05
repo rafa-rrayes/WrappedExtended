@@ -2,6 +2,7 @@
 
 import { useDashboardContext } from "@/components/dashboard/shell/dashboard-context";
 import { ApiError } from "@/lib/api-client";
+import { ViewPage } from "@/components/dashboard/views/view-shell";
 import { useMlInsights } from "@/components/dashboard/insights/use-ml-insights";
 import { MlInsightsView } from "@/components/dashboard/insights/ml-insights-view";
 import {
@@ -34,7 +35,7 @@ export default function InsightsPage() {
   const isRunning = data?.status === "pending";
 
   return (
-    <main className="mx-auto max-w-[1280px] px-4 py-8 sm:px-5">
+    <ViewPage>
       {/* Transport failure — distinct from a run that failed, and the only case with no
           usable `status` at all. */}
       {error && !data ? (
@@ -94,6 +95,6 @@ export default function InsightsPage() {
            to show", and both are fixed by running one. */
         <MlEmptyState onRun={start} isStarting={isStarting} error={startError} />
       )}
-    </main>
+    </ViewPage>
   );
 }

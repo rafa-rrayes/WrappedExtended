@@ -39,6 +39,7 @@ export function DashboardTopbar({
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
+          aria-hidden="true"
         >
           <path d="M3 12h18M3 6h18M3 18h18" />
         </svg>
@@ -46,7 +47,9 @@ export function DashboardTopbar({
 
       <DashboardSwitcher dashboardId={dashboardId} title={title} />
 
-      <div className="ml-auto flex items-center gap-2">
+      {/* `shrink-0` makes the dashboard title absorb the squeeze on a narrow viewport — it
+          already truncates, whereas the search and date controls would just overflow. */}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <button
           type="button"
           onClick={onOpenPalette}
@@ -61,6 +64,7 @@ export function DashboardTopbar({
             stroke="currentColor"
             strokeWidth="2"
             className="shrink-0"
+            aria-hidden="true"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
@@ -124,6 +128,7 @@ function DashboardSwitcher({ dashboardId, title }: { dashboardId: string; title:
             strokeWidth="2"
             strokeLinecap="round"
             className={cn("shrink-0 text-text-muted transition-transform", open && "rotate-180")}
+            aria-hidden="true"
           >
             <path d="M6 9l6 6 6-6" />
           </svg>

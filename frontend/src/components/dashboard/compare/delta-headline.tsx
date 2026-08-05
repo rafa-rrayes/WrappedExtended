@@ -15,7 +15,7 @@ import { PERIOD_A_COLOR, PERIOD_B_COLOR } from "./period-format";
 
 const TONE_CLASSES: Record<Tone, string> = {
   positive: "border-green/25 bg-green/10 text-green",
-  negative: "border-red-400/25 bg-red-400/10 text-red-400",
+  negative: "border-negative/25 bg-negative-dim text-negative",
   neutral: "border-border bg-white/[0.05] text-text-secondary",
 };
 

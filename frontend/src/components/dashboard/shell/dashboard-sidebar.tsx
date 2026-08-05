@@ -66,6 +66,7 @@ export function DashboardSidebar({
             strokeLinecap="round"
             strokeLinejoin="round"
             className={cn("shrink-0 transition-transform", collapsed && "rotate-180")}
+            aria-hidden="true"
           >
             <path d="M15 6l-6 6 6 6" />
           </svg>
@@ -83,6 +84,7 @@ export function DashboardSidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               onClick={onCloseMobile}
+              aria-hidden="true"
               className="fixed inset-0 z-[1400] bg-black/60 backdrop-blur-sm"
             />
             <m.aside
@@ -91,6 +93,10 @@ export function DashboardSidebar({
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.2 }}
               className="fixed left-0 top-0 bottom-0 z-[1401] flex w-[260px] flex-col border-r border-border bg-bg-primary"
+              // It covers the page and traps Escape, so announce it as a modal dialog
+              // rather than as a second landmark sitting behind the content.
+              role="dialog"
+              aria-modal="true"
               aria-label="Dashboard sections"
             >
               <div className="flex h-14 items-center justify-between border-b border-border px-4">
@@ -100,6 +106,9 @@ export function DashboardSidebar({
                 <button
                   type="button"
                   onClick={onCloseMobile}
+                  // Opening the drawer has to move focus into it, or a keyboard user is
+                  // still tabbing through the page behind the scrim.
+                  autoFocus
                   className="p-1 text-text-secondary transition-colors hover:text-text-primary"
                   aria-label="Close navigation"
                 >
@@ -110,6 +119,7 @@ export function DashboardSidebar({
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
+                    aria-hidden="true"
                   >
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>

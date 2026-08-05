@@ -33,9 +33,13 @@ export function RankingDiffPanel({
   labelB: string;
 }) {
   const [kind, setKind] = useState<RankingKind>("artists");
-  // Hovering an entry lights it up in both columns — the cheapest way to read a rank jump
-  // is to see the same row highlighted at two different heights.
+  // Highlighting an entry lights it up in both columns — the cheapest way to read a rank
+  // jump is to see the same row at two different heights. Hover drives it for a mouse;
+  // `pinned` is the path for touch and keyboard, where there is no hover to lose, and it
+  // also lets you hold one artist lit while you scroll the other column looking for it.
   const [hovered, setHovered] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const activeKey = pinned ?? hovered;
 
   const diff = useMemo(() => buildRankingDiff(statsA, statsB, kind), [statsA, statsB, kind]);
   const metric = RANKED_BY[kind];
@@ -48,7 +52,12 @@ export function RankingDiffPanel({
             key={option}
             type="button"
             aria-pressed={option === kind}
-            onClick={() => setKind(option)}
+            onClick={() => {
+              setKind(option);
+              // Keys are per-ranking; carrying one across would light nothing.
+              setPinned(null);
+              setHovered(null);
+            }}
             className={cn(
               "rounded-[var(--radius-sm)] px-3 py-1.5 text-xs transition-colors",
               option === kind
@@ -72,8 +81,10 @@ export function RankingDiffPanel({
           rows={diff.listA}
           side="a"
           metric={metric}
-          hovered={hovered}
+          activeKey={activeKey}
+          pinnedKey={pinned}
           onHover={setHovered}
+          onPin={setPinned}
         />
         <RankColumn
           slot="B"
@@ -82,14 +93,16 @@ export function RankingDiffPanel({
           rows={diff.listB}
           side="b"
           metric={metric}
-          hovered={hovered}
+          activeKey={activeKey}
+          pinnedKey={pinned}
           onHover={setHovered}
+          onPin={setPinned}
         />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-3 text-[0.7rem]">
         <Tally count={diff.climbed} label="climbed" className="text-green" />
-        <Tally count={diff.fell} label="fell" className="text-red-400" />
+        <Tally count={diff.fell} label="fell" className="text-negative" />
         <Tally count={diff.held} label="held" className="text-text-secondary" />
         <Tally count={diff.entered} label="entered" className="text-gold" />
         <Tally count={diff.left} label="dropped out" className="text-text-muted" />
@@ -98,7 +111,8 @@ export function RankingDiffPanel({
       <p className="mt-2 text-[0.7rem] leading-relaxed text-text-muted">
         Movement is measured inside the top {diff.topSize} each period exposes, matched on
         name. “Entered” means new to that top {diff.topSize} — not necessarily a first-ever
-        play — and “dropped out” likewise only means it fell below the cut.
+        play — and “dropped out” likewise only means it fell below the cut. Select an entry
+        to hold it highlighted in both columns.
       </p>
     </div>
   );
@@ -130,8 +144,10 @@ function RankColumn({
   rows,
   side,
   metric,
-  hovered,
+  activeKey,
+  pinnedKey,
   onHover,
+  onPin,
 }: {
   slot: "A" | "B";
   label: string;
@@ -139,8 +155,10 @@ function RankColumn({
   rows: RankingDiffRow[];
   side: "a" | "b";
   metric: "hours" | "plays";
-  hovered: string | null;
+  activeKey: string | null;
+  pinnedKey: string | null;
   onHover: (key: string | null) => void;
+  onPin: (key: string | null) => void;
 }) {
   return (
     <div>
@@ -174,36 +192,45 @@ function RankColumn({
                 : metric === "hours"
                   ? row.hoursB
                   : row.playsB;
-            const active = hovered === row.key;
+            const active = activeKey === row.key;
+            const isPinned = pinnedKey === row.key;
             return (
-              <li
-                key={row.key}
-                onMouseEnter={() => onHover(row.key)}
-                onMouseLeave={() => onHover(null)}
-                className={cn(
-                  "flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors",
-                  active ? "bg-white/[0.07]" : "hover:bg-white/[0.04]",
-                )}
-              >
-                <span className="w-5 shrink-0 text-right font-[family-name:var(--font-display)] text-xs font-bold text-text-muted">
-                  {rank}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-text-primary">{row.label}</span>
-                  {row.sublabel && (
-                    <span className="block truncate text-[0.65rem] text-text-muted">
-                      {row.sublabel}
-                    </span>
+              <li key={row.key}>
+                <button
+                  type="button"
+                  aria-pressed={isPinned}
+                  onMouseEnter={() => onHover(row.key)}
+                  onMouseLeave={() => onHover(null)}
+                  onFocus={() => onHover(row.key)}
+                  onBlur={() => onHover(null)}
+                  onClick={() => onPin(isPinned ? null : row.key)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors",
+                    active ? "bg-white/[0.07]" : "hover:bg-white/[0.04]",
                   )}
-                </span>
-                <span className="shrink-0 text-[0.7rem] text-text-secondary tabular-nums">
-                  {value === null
-                    ? "—"
-                    : metric === "hours"
-                      ? formatHours(value)
-                      : `${formatNumber(value)}×`}
-                </span>
-                <MovementChip row={row} side={side} />
+                >
+                  <span className="w-5 shrink-0 text-right font-[family-name:var(--font-display)] text-xs font-bold text-text-muted">
+                    {rank}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-text-primary">
+                      {row.label}
+                    </span>
+                    {row.sublabel && (
+                      <span className="block truncate text-[0.65rem] text-text-muted">
+                        {row.sublabel}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-[0.7rem] text-text-secondary tabular-nums">
+                    {value === null
+                      ? "—"
+                      : metric === "hours"
+                        ? formatHours(value)
+                        : `${formatNumber(value)}×`}
+                  </span>
+                  <MovementChip row={row} side={side} />
+                </button>
               </li>
             );
           })}
@@ -215,7 +242,7 @@ function RankColumn({
 
 const MOVEMENT_STYLE: Record<Movement, string> = {
   up: "border-green/25 bg-green/10 text-green",
-  down: "border-red-400/25 bg-red-400/10 text-red-400",
+  down: "border-negative/25 bg-negative-dim text-negative",
   same: "border-transparent text-text-muted",
   new: "border-gold/30 bg-gold-dim text-gold",
   gone: "border-border bg-white/[0.04] text-text-muted",

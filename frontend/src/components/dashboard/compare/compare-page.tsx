@@ -6,6 +6,11 @@ import type { CompareResponse } from "@/types/dashboard";
 import { ApiError, apiClient } from "@/lib/api-client";
 import { toIsoDate, useDateRange } from "@/lib/hooks/use-date-range";
 import { useDashboardContext } from "@/components/dashboard/shell/dashboard-context";
+import {
+  ScopeIgnoredNotice,
+  ViewHeader,
+  ViewPage,
+} from "@/components/dashboard/views/view-shell";
 import { cn } from "@/lib/utils";
 import { CompareSection, PeriodLegend } from "./compare-section";
 import {
@@ -78,19 +83,24 @@ export function ComparePage() {
   );
 
   return (
-    <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-5 sm:py-8">
-      <header className="mb-6">
-        <span className="mb-1.5 block font-[family-name:var(--font-display)] text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-green">
-          Compare
-        </span>
-        <h1 className="font-[family-name:var(--font-display)] text-[clamp(1.6rem,3.2vw,2.4rem)] font-extrabold leading-[1.15] text-text-primary">
-          Two periods, <span className="text-gold">side by side</span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-          Pick any two spans of your history and see what actually moved — the totals, the
-          rankings, and the shape of the listening itself.
-        </p>
-      </header>
+    <ViewPage>
+      <ViewHeader
+        eyebrow="Compare"
+        title={
+          <>
+            Two periods, <span className="text-gold">side by side</span>
+          </>
+        }
+        description="Pick any two spans of your history and see what actually moved — the totals, the rankings, and the shape of the listening itself."
+        actions={
+          <ScopeIgnoredNotice
+            isFiltered={isFiltered}
+            title="Compare draws its own two periods, so the top-bar date filter would only be a third, conflicting range."
+          >
+            Date filter not applied
+          </ScopeIgnoredNotice>
+        }
+      />
 
       {periods === null || min === null || max === null ? (
         <NoRangeNotice />
@@ -106,13 +116,6 @@ export function ComparePage() {
             activePresetId={activePresetId}
             onChange={setPeriods}
           />
-
-          {isFiltered && (
-            <p className="mt-3 text-[0.7rem] text-text-muted">
-              The top-bar date filter doesn&apos;t apply on this page — Compare uses the two
-              periods above instead.
-            </p>
-          )}
 
           <div className="mt-6">
             {error ? (
@@ -149,7 +152,7 @@ export function ComparePage() {
           </div>
         </>
       )}
-    </main>
+    </ViewPage>
   );
 }
 

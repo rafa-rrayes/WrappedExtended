@@ -8,7 +8,7 @@ import { LateNight } from "@/components/dashboard/late-night";
 import { GeographicListening } from "@/components/dashboard/geographic-listening";
 import { DeepStats } from "@/components/dashboard/deep-stats";
 import { ScopeNotice, ViewHeader, ViewPage } from "./view-shell";
-import { EmptySection, SectionSkeleton, ViewSection, hasAnyStat } from "./view-section";
+import { EmptySection, SectionSkeleton, ViewSection, hasAnyStat, hasStat } from "./view-section";
 import { useScopedStats } from "./use-scoped-stats";
 
 export function HabitsView() {
@@ -79,13 +79,16 @@ export function HabitsView() {
             />
           </ViewSection>
 
-          {stats.weekend_vs_weekday ? (
+          {/* These two take a required, non-nullable prop, so they narrow in a ternary
+              rather than going through `ViewSection` — same `hasStat` guard, same
+              `EmptySection` fallback as every other block on the page. */}
+          {hasStat(stats.weekend_vs_weekday) ? (
             <WeekendWeekday data={stats.weekend_vs_weekday} />
           ) : (
             <EmptySection title="Weekend vs weekday" />
           )}
 
-          {stats.late_night_analysis ? (
+          {hasStat(stats.late_night_analysis) ? (
             <LateNight data={stats.late_night_analysis} />
           ) : (
             <EmptySection title="Late night" />

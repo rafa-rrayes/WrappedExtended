@@ -98,3 +98,32 @@ export function ScopeNotice({
     </span>
   );
 }
+
+/**
+ * The counterpart for a route that deliberately does *not* obey the top-bar filter.
+ *
+ * Compare picks its own two periods, and the Lab, Story and Insights routes all run
+ * against the complete history by design. The date picker is visible on every one of them,
+ * so the alternative to this chip is a control that silently does nothing — which reads as
+ * a bug. Deliberately neutral rather than green: it reports an absence, not a selection.
+ */
+export function ScopeIgnoredNotice({
+  isFiltered,
+  children,
+  title,
+}: {
+  isFiltered: boolean;
+  children: ReactNode;
+  title?: string;
+}) {
+  if (!isFiltered) return null;
+
+  return (
+    <span
+      title={title}
+      className="rounded-full border border-border bg-bg-elevated px-3 py-1 text-xs font-medium text-text-muted"
+    >
+      {children}
+    </span>
+  );
+}

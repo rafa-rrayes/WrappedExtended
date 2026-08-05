@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { DashboardData } from "@/types/dashboard";
 import { cn, formatNumber } from "@/lib/utils";
+import { CompareTooltip, CompareTooltipRow } from "./compare-tooltip";
 import { formatCompact, PERIOD_A_COLOR, PERIOD_B_COLOR } from "./period-format";
 
 /**
@@ -189,7 +190,7 @@ function DistributionChart({
             <XAxis
               dataKey="label"
               interval={tickInterval}
-              tick={{ fontSize: 10, fill: "#555" }}
+              tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
               axisLine={false}
               tickLine={false}
             />
@@ -197,7 +198,7 @@ function DistributionChart({
               tickFormatter={(value: number) =>
                 mode === "share" ? `${value.toFixed(0)}%` : formatCompact(value)
               }
-              tick={{ fontSize: 10, fill: "#555" }}
+              tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
               axisLine={false}
               tickLine={false}
               width={40}
@@ -235,26 +236,9 @@ function DistributionTooltip({
     mode === "share" ? `${value.toFixed(1)}%` : `${formatNumber(Math.round(value))} plays`;
 
   return (
-    <div className="rounded-lg border border-green/30 bg-black/90 px-3 py-2 text-xs shadow-2xl">
-      <div className="mb-1 font-semibold text-text-primary">{row.label}</div>
-      <div className="flex items-center gap-2 whitespace-nowrap">
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: PERIOD_A_COLOR }}
-          aria-hidden="true"
-        />
-        <span className="text-text-muted">{labelA}</span>
-        <span className="ml-auto pl-2 font-semibold text-text-primary">{format(row.a)}</span>
-      </div>
-      <div className="flex items-center gap-2 whitespace-nowrap">
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: PERIOD_B_COLOR }}
-          aria-hidden="true"
-        />
-        <span className="text-text-muted">{labelB}</span>
-        <span className="ml-auto pl-2 font-semibold text-text-primary">{format(row.b)}</span>
-      </div>
-    </div>
+    <CompareTooltip title={row.label}>
+      <CompareTooltipRow color={PERIOD_A_COLOR} label={labelA} value={format(row.a)} />
+      <CompareTooltipRow color={PERIOD_B_COLOR} label={labelB} value={format(row.b)} />
+    </CompareTooltip>
   );
 }

@@ -59,18 +59,25 @@ export function CompareSkeleton() {
     <div className="space-y-6">
       <CompareProgress message="Crunching both periods…" />
 
+      {/* Every block below stands in for a real section, at its real breakpoint, so the
+          page does not re-flow when the comparison lands. */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <Skeleton key={index} className="h-[104px] rounded-[var(--radius-card)]" />
         ))}
       </div>
 
+      {/* Temporal overlay. */}
       <Skeleton className="h-[360px] rounded-[var(--radius-card)]" />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Distribution pairs — `lg`, matching DistributionCompare's own grid. */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Skeleton className="h-[320px] rounded-[var(--radius-card)]" />
         <Skeleton className="h-[320px] rounded-[var(--radius-card)]" />
       </div>
+
+      {/* Ranking diff. */}
+      <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />
     </div>
   );
 }
@@ -101,7 +108,7 @@ export function CompareError({ message, onRetry }: { message: string; onRetry: (
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-[var(--radius-sm)] bg-green px-4 py-2 text-sm font-medium text-black transition-opacity hover:opacity-90"
+        className="rounded-full bg-green px-6 py-2.5 text-sm font-semibold text-bg-deep transition-opacity hover:opacity-90"
       >
         Try again
       </button>
