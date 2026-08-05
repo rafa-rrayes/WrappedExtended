@@ -8,8 +8,25 @@ interface HourDayHeatmapProps {
   data: HourDayHeatmapEntry[];
 }
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/**
+ * Grid rows, in display order.
+ *
+ * `key` is the exact string the API sends as `weekday` — the backend maps Polars'
+ * 1-7 weekday to these abbreviations (see
+ * `backend/processing/stages/analyzers/heatmaps.py`), so the lookup below has to
+ * match them character for character. `label` is only ever rendered. They read the
+ * same today; keeping them as separate fields is what stops a change to one from
+ * silently breaking the other.
+ */
+const DAYS: { key: string; label: string }[] = [
+  { key: "Mon", label: "Mon" },
+  { key: "Tue", label: "Tue" },
+  { key: "Wed", label: "Wed" },
+  { key: "Thu", label: "Thu" },
+  { key: "Fri", label: "Fri" },
+  { key: "Sat", label: "Sat" },
+  { key: "Sun", label: "Sun" },
+];
 
 function formatHourLabel(hour: number): string {
   if (hour === 0) return "12a";
@@ -98,14 +115,14 @@ export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
   const { grid, max } = useMemo(() => {
     const g: Record<string, Record<number, number>> = {};
     let m = 0;
-    for (const day of DAYS) {
-      g[day] = {};
-      for (let h = 0; h < 24; h++) g[day][h] = 0;
+    for (const { key } of DAYS) {
+      g[key] = {};
+      for (let h = 0; h < 24; h++) g[key][h] = 0;
     }
     for (const entry of data ?? []) {
-      const day = entry.weekday;
-      if (g[day]) {
-        g[day][entry.hour] = entry.hours;
+      const row = g[entry.weekday];
+      if (row) {
+        row[entry.hour] = entry.hours;
         if (entry.hours > m) m = entry.hours;
       }
     }
@@ -140,14 +157,14 @@ export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
           </div>
 
           {/* Grid rows */}
-          {DAYS.map((day, di) => (
-            <div key={day} className="flex items-center gap-1 mb-1">
+          {DAYS.map(({ key, label }) => (
+            <div key={key} className="flex items-center gap-1 mb-1">
               <span className="w-14 text-right text-[0.7rem] text-text-muted font-[family-name:var(--font-display)] font-medium pr-2 shrink-0">
-                {DAY_SHORT[di]}
+                {label}
               </span>
               <div className="flex flex-1 gap-[2px]">
                 {Array.from({ length: 24 }, (_, h) => {
-                  const val = grid[day]?.[h] ?? 0;
+                  const val = grid[key]?.[h] ?? 0;
                   return (
                     <div
                       key={h}
@@ -155,7 +172,7 @@ export function HourDayHeatmap({ data }: HourDayHeatmapProps) {
                       style={{ backgroundColor: getHeatColor(val, max) }}
                     >
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[rgba(10,10,10,0.92)] border border-green/30 rounded-lg text-[0.6rem] text-text-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                        {DAY_SHORT[di]} {formatHourLabel(h)}:{" "}
+                        {label} {formatHourLabel(h)}:{" "}
                         {val > 0 ? `${val.toFixed(1)}h` : "0h"}
                       </div>
                     </div>

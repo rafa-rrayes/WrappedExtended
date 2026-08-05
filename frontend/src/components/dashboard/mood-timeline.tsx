@@ -25,6 +25,21 @@ interface MoodTimelineProps {
   data: MoodEntry[];
 }
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "2017-10" → "Oct '17". Anything unexpected is passed through instead of throwing. */
+function formatMonth(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const match = /^(\d{4})-(\d{1,2})$/.exec(value);
+  if (!match) return value;
+  const name = MONTH_NAMES[Number(match[2]) - 1];
+  if (!name) return value;
+  return `${name} '${match[1].slice(2)}`;
+}
+
 export function MoodTimeline({ data }: MoodTimelineProps) {
   if (!data?.length) return null;
 
@@ -44,7 +59,8 @@ export function MoodTimeline({ data }: MoodTimelineProps) {
             <XAxis
               dataKey="month"
               tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-              tickFormatter={(v) => v.slice(2)}
+              tickFormatter={formatMonth}
+              minTickGap={20}
             />
             <YAxis
               domain={[0, 100]}
@@ -58,6 +74,7 @@ export function MoodTimeline({ data }: MoodTimelineProps) {
                 fontSize: 12,
               }}
               labelStyle={{ color: "var(--color-text-primary)" }}
+              labelFormatter={formatMonth}
             />
             <Legend
               wrapperStyle={{ fontSize: 11, color: "var(--color-text-muted)" }}

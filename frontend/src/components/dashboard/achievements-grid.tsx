@@ -86,13 +86,21 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
         />
       </div>
 
-      <div className="flex justify-between items-center">
-        <span className={`text-[0.6rem] font-medium uppercase tracking-wider ${style.label}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`shrink-0 text-[0.6rem] font-medium uppercase tracking-wider ${style.label}`}
+        >
           {achievement.unlocked ? achievement.tier : `${Math.round(progress * 100)}%`}
         </span>
-        {achievement.context && achievement.unlocked && (
-          <span className="text-[0.6rem] text-text-muted">{achievement.context}</span>
-        )}
+        {/* Shown whether or not the badge is unlocked: a tier on its own ("PLATINUM")
+            never says how many, and on a locked badge the figure is the motivating half
+            of the card. `title` keeps the full string reachable when it truncates. */}
+        <span
+          className="truncate text-right text-[0.6rem] text-text-muted"
+          title={achievement.context}
+        >
+          {achievement.context}
+        </span>
       </div>
     </div>
   );

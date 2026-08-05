@@ -20,6 +20,47 @@ interface YearOverYearProps {
   data: YearOverYearType[];
 }
 
+/** A year counts towards the growth figure once it reaches this share of the peak year. */
+const SUBSTANTIAL_YEAR_SHARE = 0.1;
+
+/**
+ * Total growth, anchored to the first *substantial* year rather than to `data[0]`.
+ *
+ * An export's first year is very often a stub — the tail of the year the account was
+ * opened, or a few minutes of playback. Dividing by it produced numbers like "+332,726%"
+ * (0.2 hours in 2016 → 665 hours today), which is arithmetically true and tells the
+ * reader nothing. A year is treated as substantial once it reaches 10% of the user's
+ * peak year: a *relative* floor, so it behaves the same for a 5,000-hour listener and a
+ * 200-hour one, and the peak year always clears its own floor, so at least one year
+ * always qualifies. The newest year is filtered on the same rule, because an export
+ * pulled in January leaves an identical stub at the other end. Both endpoints are named
+ * in the label — a growth figure is only interpretable if you can see what it spans.
+ *
+ * The rule errs towards silence: a listener who ramped up from one genuinely light year
+ * loses the pill rather than being handed a four-digit percentage. The chart and the
+ * per-year change beneath it still carry that story, so nothing is lost but the boast.
+ */
+function computeGrowth(
+  data: YearOverYearType[],
+  peakHours: number,
+): { from: number; to: number; pct: number } | null {
+  // Sorted here rather than trusted from the caller: the endpoints are the whole point.
+  const substantial = data
+    .filter((y) => y.hours >= peakHours * SUBSTANTIAL_YEAR_SHARE)
+    .sort((a, b) => a.year - b.year);
+  const from = substantial[0];
+  const to = substantial[substantial.length - 1];
+
+  // One substantial year is not a trend, and a zero baseline is not a divisor.
+  if (!from || !to || from.year === to.year || from.hours <= 0) return null;
+
+  return {
+    from: from.year,
+    to: to.year,
+    pct: Math.round(((to.hours - from.hours) / from.hours) * 100),
+  };
+}
+
 export function YearOverYear({ data }: YearOverYearProps) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
@@ -32,13 +73,7 @@ export function YearOverYear({ data }: YearOverYearProps) {
     data[0],
   );
 
-  // Total growth %: from first year to last year
-  const firstYear = data[0];
-  const lastYear = data[data.length - 1];
-  const totalGrowthPct =
-    firstYear.hours > 0
-      ? Math.round(((lastYear.hours - firstYear.hours) / firstYear.hours) * 100)
-      : 0;
+  const growth = computeGrowth(data, bestYear.hours);
 
   const selectedYearData = data.find((y) => y.year === selectedYear) ?? null;
 
@@ -63,17 +98,21 @@ export function YearOverYear({ data }: YearOverYearProps) {
                 {bestYear.year} ({formatHours(bestYear.hours)})
               </span>
             </div>
-            <div className="inline-flex items-center gap-2 bg-bg-card border border-border rounded-full px-4 py-2">
-              <span className="text-text-muted text-xs">Growth:</span>
-              <span
-                className={`font-[family-name:var(--font-display)] text-sm font-bold ${
-                  totalGrowthPct >= 0 ? "text-green" : "text-red-400"
-                }`}
-              >
-                {totalGrowthPct >= 0 ? "+" : ""}
-                {totalGrowthPct}%
-              </span>
-            </div>
+            {growth && (
+              <div className="inline-flex items-center gap-2 bg-bg-card border border-border rounded-full px-4 py-2">
+                <span className="text-text-muted text-xs">
+                  Growth {growth.from}→{growth.to}:
+                </span>
+                <span
+                  className={`font-[family-name:var(--font-display)] text-sm font-bold ${
+                    growth.pct >= 0 ? "text-green" : "text-red-400"
+                  }`}
+                >
+                  {growth.pct >= 0 ? "+" : ""}
+                  {formatNumber(growth.pct)}%
+                </span>
+              </div>
+            )}
             <div className="inline-flex items-center gap-2 bg-bg-card border border-border rounded-full px-4 py-2">
               <span className="text-text-muted text-xs">Most Artists:</span>
               <span className="font-[family-name:var(--font-display)] text-sm font-bold text-green">

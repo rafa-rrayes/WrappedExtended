@@ -19,6 +19,66 @@ interface GeographicListeningProps {
   travelMusic?: TravelMusic[];
 }
 
+/** Spotify's placeholder for "we don't know where this play came from". */
+const UNKNOWN_REGION = "ZZ";
+
+/** Built once — constructing an Intl formatter per tick is needlessly expensive. */
+const regionDisplayNames =
+  typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null;
+
+/** "BR" → "🇧🇷". Empty string for anything that isn't a two-letter code. */
+function countryFlag(code: string): string {
+  if (!/^[a-z]{2}$/i.test(code)) return "";
+  return String.fromCodePoint(
+    ...code
+      .toUpperCase()
+      .split("")
+      .map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65),
+  );
+}
+
+/**
+ * "BR" → { flag: "🇧🇷", name: "Brazil" }. "ZZ" is Spotify's unknown region; any code the
+ * platform can't resolve falls back to the raw code with no flag — never "undefined".
+ */
+function resolveCountry(code: string): { flag: string; name: string } {
+  const upper = code?.toUpperCase() ?? "";
+  if (!upper || upper === UNKNOWN_REGION) return { flag: "", name: "Unknown" };
+  if (!/^[A-Z]{2}$/.test(upper)) return { flag: "", name: code };
+
+  let name = upper;
+  try {
+    name = regionDisplayNames?.of(upper) || upper;
+  } catch {
+    name = upper;
+  }
+  // An unresolved code comes back unchanged — don't dress it up with a meaningless flag.
+  return { flag: name === upper ? "" : countryFlag(upper), name };
+}
+
+/** "BR" → "Brazil", "ZZ" → "Unknown". */
+function countryName(code: string): string {
+  return resolveCountry(code).name;
+}
+
+/** "BR" → "🇧🇷 Brazil", "ZZ" → "Unknown". */
+function countryLabel(code: string): string {
+  const { flag, name } = resolveCountry(code);
+  return flag ? `${flag} ${name}` : name;
+}
+
+/**
+ * Same as `countryLabel`, clipped to what fits the axis gutter on a phone-width card.
+ * The tooltip still shows the full name.
+ */
+function countryAxisLabel(code: string): string {
+  const { flag, name } = resolveCountry(code);
+  const clipped = name.length > 15 ? `${name.slice(0, 14)}…` : name;
+  return flag ? `${flag} ${clipped}` : clipped;
+}
+
 export function GeographicListening({ countries, travelMusic }: GeographicListeningProps) {
   if (!countries?.length && !travelMusic?.length) return null;
 
@@ -51,7 +111,7 @@ export function GeographicListening({ countries, travelMusic }: GeographicListen
                       <BarChart
                         data={countries.slice(0, 12)}
                         layout="vertical"
-                        margin={{ left: 50, right: 10, top: 5, bottom: 5 }}
+                        margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                         <XAxis
@@ -64,7 +124,8 @@ export function GeographicListening({ countries, travelMusic }: GeographicListen
                         <YAxis
                           type="category"
                           dataKey="country"
-                          width={50}
+                          width={124}
+                          tickFormatter={countryAxisLabel}
                           tick={{ fontSize: 11, fill: "#999" }}
                           axisLine={false}
                           tickLine={false}
@@ -76,6 +137,7 @@ export function GeographicListening({ countries, travelMusic }: GeographicListen
                             borderRadius: 8,
                           }}
                           formatter={(value: number) => [formatHours(value), "Hours"]}
+                          labelFormatter={(code) => countryLabel(String(code))}
                         />
                         <Bar dataKey="hours" radius={[0, 4, 4, 0]} isAnimationActive={inView}>
                           {countries.slice(0, 12).map((_, i) => {
@@ -101,11 +163,14 @@ export function GeographicListening({ countries, travelMusic }: GeographicListen
                     </span>
                     <span className="text-text-secondary text-lg mt-3">
                       of your music was from{" "}
-                      <span className="text-text-primary font-semibold">{countries[0].country}</span>
+                      <span className="text-text-primary font-semibold">
+                        {countryLabel(countries[0].country)}
+                      </span>
                     </span>
                     {countries.length === 2 && (
                       <span className="text-text-muted text-sm mt-2">
-                        The remaining {countries[1].pct.toFixed(0)}% from {countries[1].country}
+                        The remaining {countries[1].pct.toFixed(0)}% from{" "}
+                        {countryLabel(countries[1].country)}
                       </span>
                     )}
                     <span className="text-text-muted text-xs mt-4">
@@ -128,8 +193,11 @@ export function GeographicListening({ countries, travelMusic }: GeographicListen
                       key={tm.country}
                       className="flex items-center gap-4 p-3 bg-white/[0.02] rounded-[var(--radius-sm)] hover:bg-white/[0.04] transition-colors"
                     >
-                      <span className="font-[family-name:var(--font-display)] text-lg font-bold text-text-secondary shrink-0">
-                        {tm.country}
+                      <span
+                        className="font-[family-name:var(--font-display)] text-sm font-bold text-text-secondary shrink-0 w-32 truncate"
+                        title={countryName(tm.country)}
+                      >
+                        {countryLabel(tm.country)}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="text-text-primary text-sm font-medium truncate">

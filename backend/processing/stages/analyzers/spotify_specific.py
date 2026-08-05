@@ -70,10 +70,7 @@ def compute_spotify_specific(df: pl.DataFrame) -> dict:
     if has_column(df, "ms_played") and has_column(df, "track_name"):
         # Use median ms_played per track as a proxy for track duration
         track_stats = (
-            df.filter(
-                pl.col("track_name").is_not_null()
-                & (pl.col("ms_played") > 0)
-            )
+            df.filter(pl.col("track_name").is_not_null() & (pl.col("ms_played") > 0))
             .group_by("track_name", "artist_name")
             .agg(
                 pl.len().alias("plays"),
@@ -82,10 +79,17 @@ def compute_spotify_specific(df: pl.DataFrame) -> dict:
             )
             .filter(pl.col("plays") >= 5)
         )
-        # Estimate completion as avg_ms / max_ms (best proxy without track duration metadata)
-        completion = track_stats.with_columns(
-            (pl.col("avg_ms") / pl.col("max_ms") * 100).round(1).alias("avg_completion_pct")
-        ).sort("plays", descending=True).head(50)
+        # Estimate completion as avg_ms / max_ms (best proxy without track duration metadata).
+        # Sorted by completion, not by plays — a list titled "completion rates" that runs
+        # 36%, 27%, 34%, 31% reads as broken. The `plays >= 5` floor above is what keeps a
+        # single fluke play from claiming 100%.
+        completion = (
+            track_stats.with_columns(
+                (pl.col("avg_ms") / pl.col("max_ms") * 100).round(1).alias("avg_completion_pct")
+            )
+            .sort("avg_completion_pct", descending=True)
+            .head(50)
+        )
 
         stats["track_completion_rates"] = completion.select(
             "track_name", "artist_name", "plays", "avg_completion_pct"

@@ -36,6 +36,13 @@ const ROUTE_BLURBS: Record<string, string> = {
   "/lab": "Chart builder, what-if and journey replay.",
 };
 
+/**
+ * A flex-wrapped card: it wants ~260px, grows to share whatever the row has left, and may
+ * shrink below its basis rather than push the page sideways on a narrow phone. The last
+ * card of a row therefore fills the row instead of leaving a gap next to itself.
+ */
+const HIGHLIGHT_FLEX = "min-w-0 grow basis-[260px]";
+
 export function OverviewView() {
   const { dashboardId, dashboard } = useDashboardContext();
   const { stats, from, to, isFiltered, isLoading, failed } = useScopedStats();
@@ -88,8 +95,14 @@ export function OverviewView() {
           <h2 className="mb-4 border-b border-border pb-4 font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
             Highlights
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Three peers, so they must never split 2 + 1 with a hole beside the third.
+              Wrapping on the cards' own width rather than on `sm:`/`lg:` column counts
+              also keeps the sidebar out of it: the breakpoint that added a third column
+              was the same one that took ~240px away for the sidebar. A row that cannot
+              fit three cards fits two, and a lone last card grows to fill its row. */}
+          <div className="flex flex-wrap gap-4">
             <HighlightCard
+              className={HIGHLIGHT_FLEX}
               eyebrow="Top artist"
               title={topArtist?.artist_name}
               meta={
@@ -101,6 +114,7 @@ export function OverviewView() {
               cta="All artists"
             />
             <HighlightCard
+              className={HIGHLIGHT_FLEX}
               eyebrow="Top track"
               title={topTrack?.track_name}
               meta={
@@ -112,6 +126,7 @@ export function OverviewView() {
               cta="All tracks"
             />
             <HighlightCard
+              className={HIGHLIGHT_FLEX}
               eyebrow="Top album"
               title={topAlbum?.album_name}
               meta={
@@ -178,12 +193,14 @@ export function OverviewView() {
             <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
               Explore
             </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Ten destinations never divide evenly into three columns, so the same
+                wrap-on-card-width rule applies: the leftover card fills its row. */}
+            <div className="flex flex-wrap gap-3">
               {DASHBOARD_NAV.filter((item) => item.segment !== "").map((item) => (
                 <Link
                   key={item.segment}
                   href={withRange(navHref(dashboardId, item.segment))}
-                  className="group flex items-start gap-3 rounded-[var(--radius-card)] border border-border bg-bg-card p-4 transition-colors hover:border-white/10 hover:bg-bg-card-hover"
+                  className="group flex min-w-0 grow basis-[240px] items-start gap-3 rounded-[var(--radius-card)] border border-border bg-bg-card p-4 transition-colors hover:border-white/10 hover:bg-bg-card-hover"
                 >
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-elevated text-text-secondary transition-colors group-hover:text-green">
                     <NavIcon name={item.icon} />
@@ -216,6 +233,7 @@ function HighlightCard({
   cta,
   accent = "green",
   emptyNote,
+  className = "",
 }: {
   eyebrow: string;
   title?: string;
@@ -224,11 +242,13 @@ function HighlightCard({
   cta: string;
   accent?: "green" | "gold";
   emptyNote?: string;
+  /** Layout classes from the caller — the card owns its skin, the row owns its sizing. */
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className="group flex flex-col justify-between rounded-[var(--radius-card)] border border-border bg-bg-card p-5 transition-colors hover:border-white/10 hover:bg-bg-card-hover"
+      className={`group flex flex-col justify-between rounded-[var(--radius-card)] border border-border bg-bg-card p-5 transition-colors hover:border-white/10 hover:bg-bg-card-hover ${className}`}
     >
       <div className="min-w-0">
         <span

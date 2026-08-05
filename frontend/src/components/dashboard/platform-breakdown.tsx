@@ -36,6 +36,17 @@ interface AggregatedPlatform {
   pct: number;
 }
 
+/**
+ * A share that is real but tiny must not print as "0.0%" — next to "58.2h" that reads as
+ * a rounding bug rather than as a small number. The symmetric guard keeps the other row
+ * from claiming a flat "100.0%" while its counterpart admits to being non-zero.
+ */
+function formatPct(pct: number): string {
+  if (pct > 0 && pct < 0.1) return "<0.1%";
+  if (pct < 100 && pct > 99.9) return ">99.9%";
+  return `${pct.toFixed(1)}%`;
+}
+
 export function PlatformBreakdown({
   platformHours,
   contentTypes,
@@ -67,6 +78,24 @@ export function PlatformBreakdown({
     () => aggregatedPlatforms.reduce((sum, p) => sum + p.hours, 0),
     [aggregatedPlatforms],
   );
+
+  /*
+   * The backend's `pct` on a content type is a share of *stream count*, not of hours
+   * (`distributions.py`: `safe_div(music.height, total)`), so printing it beside
+   * `formatHours(ct.hours)` sets two different metrics side by side: a handful of
+   * hour-long podcast episodes is a visible slice of hours and a rounding error's worth
+   * of streams, which is how "58.2h (0.0%)" happens. Recompute the share from hours here
+   * — both the number and the bar below it — so the pair is internally consistent. The
+   * stream-count share stays available on `ct.pct` for anyone who wants it.
+   */
+  const contentTypeRows = useMemo(() => {
+    if (!contentTypes?.length) return [];
+    const totalContentHours = contentTypes.reduce((sum, ct) => sum + ct.hours, 0);
+    return contentTypes.map((ct) => ({
+      ...ct,
+      hoursPct: totalContentHours > 0 ? (ct.hours / totalContentHours) * 100 : 0,
+    }));
+  }, [contentTypes]);
 
   const handlePieEnter = useCallback((_: unknown, index: number) => {
     setActiveIndex(index);
@@ -203,7 +232,7 @@ export function PlatformBreakdown({
                         {p.platform}
                       </span>
                       <span className="text-text-muted text-[0.65rem] ml-auto shrink-0">
-                        {p.pct.toFixed(1)}%
+                        {formatPct(p.pct)}
                       </span>
                     </div>
                   ))}
@@ -218,21 +247,21 @@ export function PlatformBreakdown({
                   Content Types
                 </h3>
                 <div className="space-y-4 mt-6">
-                  {contentTypes.map((ct, i) => (
+                  {contentTypeRows.map((ct, i) => (
                     <div key={ct.type}>
                       <div className="flex justify-between mb-1.5">
                         <span className="text-text-primary text-sm font-medium capitalize">
                           {ct.type}
                         </span>
                         <span className="text-text-secondary text-sm">
-                          {formatHours(ct.hours)} ({ct.pct.toFixed(1)}%)
+                          {formatHours(ct.hours)} ({formatPct(ct.hoursPct)})
                         </span>
                       </div>
                       <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{
-                            width: `${ct.pct}%`,
+                            width: `${ct.hoursPct}%`,
                             backgroundColor: COLORS[i % COLORS.length],
                           }}
                         />

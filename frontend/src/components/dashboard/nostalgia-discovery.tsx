@@ -196,9 +196,13 @@ export function NostalgiaDiscovery({
             {/* Discovery rate chart */}
             {discoveryRate && discoveryRate.length > 0 && (
               <div className="bg-bg-card border border-border rounded-[var(--radius-card)] p-6 lg:col-span-2">
-                <h3 className="font-[family-name:var(--font-display)] text-sm font-bold text-text-secondary mb-4 tracking-wide uppercase">
-                  Discovery Rate
+                <h3 className="font-[family-name:var(--font-display)] text-sm font-bold text-text-secondary mb-1 tracking-wide uppercase">
+                  Discovery Rate &amp; Library Growth
                 </h3>
+                <p className="text-text-muted text-[0.7rem] mb-4">
+                  <span className="text-green">New tracks per month</span> on the left axis,{" "}
+                  <span className="text-gold">total tracks discovered so far</span> on the right.
+                </p>
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={discoveryRate} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                     <defs>
@@ -221,15 +225,28 @@ export function NostalgiaDiscovery({
                       tick={{ fontSize: 10, fill: "#555" }}
                       axisLine={false}
                       tickLine={false}
-                      width={40}
+                      width={56}
+                      label={{
+                        value: "new tracks / month",
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { fontSize: 10, fill: "#1DB954", textAnchor: "middle" },
+                      }}
                     />
                     <YAxis
                       yAxisId="cum"
                       orientation="right"
+                      tickFormatter={formatNumber}
                       tick={{ fontSize: 10, fill: "#555" }}
                       axisLine={false}
                       tickLine={false}
-                      width={50}
+                      width={72}
+                      label={{
+                        value: "library size (total tracks)",
+                        angle: 90,
+                        position: "insideRight",
+                        style: { fontSize: 10, fill: "#F5A623", textAnchor: "middle" },
+                      }}
                     />
                     <Tooltip
                       contentStyle={{

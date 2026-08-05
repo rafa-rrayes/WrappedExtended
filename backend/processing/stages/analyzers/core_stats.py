@@ -117,8 +117,13 @@ def compute_core_stats(df: pl.DataFrame) -> dict:
         stats["shuffle_pct"] = round(shuffle_on / total * 100, 1) if total else 0
 
     if has_column(df, "skipped"):
-        skipped = df.filter(pl.col("skipped").is_not_null() & (pl.col("skipped") != 0)).height
-        stats["skip_pct"] = round(skipped / total * 100, 1) if total else 0
+        # Same denominator as `query_engine._skip_rate`: only the plays where Spotify
+        # actually recorded skip info. Older exports leave `skipped` null on most rows, and
+        # counting those as "not skipped" is what had this reporting 19% while Compare —
+        # which already used the narrower denominator — reported 45% for the same listening.
+        known_skips = df["skipped"].cast(pl.Boolean, strict=False).drop_nulls()
+        if not known_skips.is_empty():
+            stats["skip_pct"] = round((known_skips.sum() or 0) / len(known_skips) * 100, 1)
 
     if has_column(df, "offline"):
         offline = df.filter(pl.col("offline") == True).height  # noqa: E712

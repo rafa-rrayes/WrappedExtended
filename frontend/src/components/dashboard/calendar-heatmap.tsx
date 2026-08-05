@@ -174,16 +174,11 @@ export function CalendarHeatmap({ data }: CalendarHeatmapProps) {
     return { years: sortedYears, maxHours: max };
   }, [data]);
 
-  const [selectedYear, setSelectedYear] = useState<YearSelection>(() => {
-    if (!data?.length) return ALL_YEARS;
-    // Default to most recent year
-    let maxYear = 0;
-    for (const entry of data) {
-      const y = new Date(entry.date).getFullYear();
-      if (y > maxYear) maxYear = y;
-    }
-    return maxYear;
-  });
+  // Open on every year rather than the most recent one. The newest year is a partial year
+  // for most of the calendar — landing on a half-empty grid reads as missing data, where
+  // the full history is the section's whole point. The year picker is right there for
+  // anyone who wants to drill in.
+  const [selectedYear, setSelectedYear] = useState<YearSelection>(ALL_YEARS);
 
   const visibleYears = useMemo(() => {
     if (selectedYear === ALL_YEARS) return years;

@@ -58,6 +58,9 @@ export function ArtistDiscoveryTimeline({ data }: ArtistDiscoveryProps) {
                   tickFormatter={(ts) =>
                     new Date(ts).toLocaleDateString("en-US", { month: "short", year: "2-digit" })
                   }
+                  tickCount={9}
+                  interval="preserveStartEnd"
+                  minTickGap={28}
                   tick={{ fontSize: 10, fill: "#555" }}
                   axisLine={false}
                   tickLine={false}
