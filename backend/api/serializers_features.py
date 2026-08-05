@@ -1,5 +1,7 @@
 """Serializers for interactive feature endpoints."""
 
+from datetime import date
+
 from rest_framework import serializers
 
 
@@ -41,6 +43,24 @@ class WhatIfSerializer(serializers.Serializer):
 
 
 class JourneySerializer(serializers.Serializer):
-    year = serializers.IntegerField()
+    # Bounded so an absurd year cannot reach date() and raise there instead.
+    year = serializers.IntegerField(min_value=1970, max_value=2100)
     month = serializers.IntegerField(required=False, min_value=1, max_value=12)
     day = serializers.IntegerField(required=False, min_value=1, max_value=31)
+
+    def validate(self, attrs):
+        """Reject day/month combinations that aren't a real calendar date.
+
+        The view builds date(year, month or 1, day); without this, a request like
+        year=2024&month=2&day=30 raised an uncaught ValueError and returned a 500.
+        """
+        day = attrs.get("day")
+        if day is None:
+            return attrs
+        try:
+            date(attrs["year"], attrs.get("month") or 1, day)
+        except ValueError as exc:
+            raise serializers.ValidationError(
+                {"day": "Not a valid date for the given year and month."}
+            ) from exc
+        return attrs

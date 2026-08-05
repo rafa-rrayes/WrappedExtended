@@ -5,11 +5,15 @@ from django.db import models
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
+    )
     display_name = models.CharField(max_length=100, blank=True)
     timezone = models.CharField(max_length=50, default="UTC")
     max_uploads = models.PositiveIntegerField(default=5)
-    has_paid = models.BooleanField(default=False, help_text="One-time payment unlocks unlimited uploads")
+    has_paid = models.BooleanField(
+        default=False, help_text="One-time payment unlocks unlimited uploads"
+    )
     stripe_customer_id = models.CharField(max_length=255, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -29,7 +33,9 @@ class Upload(models.Model):
         FAILED = "failed", "Failed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="uploads")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="uploads"
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     file_key = models.CharField(max_length=500, help_text="S3 object key")
     original_filename = models.CharField(max_length=255)
@@ -51,10 +57,14 @@ class Upload(models.Model):
 class ProcessedDashboard(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     upload = models.OneToOneField(Upload, on_delete=models.CASCADE, related_name="dashboard")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboards")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboards"
+    )
 
     dashboard_data = models.JSONField(default=dict, help_text="Full aggregated stats blob")
-    parquet_key = models.CharField(max_length=500, blank=True, default="", help_text="S3 key for cleaned Parquet data")
+    parquet_key = models.CharField(
+        max_length=500, blank=True, default="", help_text="S3 key for cleaned Parquet data"
+    )
 
     # Denormalized summary fields for list views
     total_hours = models.FloatField(default=0)
@@ -85,7 +95,9 @@ class Payment(models.Model):
         FAILED = "failed", "Failed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    upload = models.OneToOneField(Upload, on_delete=models.CASCADE, related_name="payment", null=True, blank=True)
+    upload = models.OneToOneField(
+        Upload, on_delete=models.CASCADE, related_name="payment", null=True, blank=True
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments"
     )
@@ -100,7 +112,10 @@ class Payment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Payment {self.status} for {self.upload.original_filename}"
+        # `upload` is nullable (it is cleared when an abandoned upload is reaped), so
+        # this must not dereference it unconditionally — Django admin renders __str__.
+        target = self.upload.original_filename if self.upload else "deleted upload"
+        return f"Payment {self.status} for {target}"
 
 
 class GlobalBenchmark(models.Model):

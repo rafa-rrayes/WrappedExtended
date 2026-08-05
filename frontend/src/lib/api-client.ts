@@ -3,28 +3,67 @@ import type { AdminAnalytics, AnalyticsRange } from "@/types/admin";
 import type { DashboardDetail, DashboardSummary } from "@/types/dashboard";
 import { API_BASE_URL } from "./constants";
 
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-  const headers: HeadersInit = {
-    ...options.headers,
-  };
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+/** An error carrying the backend's own message, so the UI can show something useful. */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly payload: unknown;
+
+  constructor(status: number, message: string, payload: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.payload = payload;
   }
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401 && token) {
-    // Try refreshing
-    const refreshed = await refreshToken();
-    if (refreshed) {
-      (headers as Record<string, string>)["Authorization"] = `Bearer ${refreshed}`;
-      return fetch(url, { ...options, headers });
-    }
-  }
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res;
 }
 
-async function refreshToken(): Promise<string | null> {
+/**
+ * Pull a human-readable message out of a DRF error body.
+ *
+ * DRF replies in several shapes: {"detail": "..."} for permission/auth errors,
+ * {"field": ["msg", ...]} for validation errors, and occasionally a bare list.
+ */
+async function toApiError(res: Response): Promise<ApiError> {
+  let payload: unknown = null;
+  try {
+    payload = await res.clone().json();
+  } catch {
+    // Non-JSON body (HTML error page, empty response) — fall through to the status.
+  }
+
+  const fallback = `Request failed (${res.status})`;
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (typeof obj.detail === "string") return new ApiError(res.status, obj.detail, payload);
+    // First field error wins; that is what a form would surface anyway.
+    for (const value of Object.values(obj)) {
+      if (typeof value === "string") return new ApiError(res.status, value, payload);
+      if (Array.isArray(value) && typeof value[0] === "string") {
+        return new ApiError(res.status, value[0], payload);
+      }
+    }
+  }
+  return new ApiError(res.status, fallback, payload);
+}
+
+/**
+ * In-flight refresh, shared by every caller.
+ *
+ * SimpleJWT runs with ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION, so a refresh
+ * token is single-use. The dashboard fires several requests at once; letting each
+ * expired-token response start its own refresh meant the first call rotated the token
+ * and the rest presented a now-blacklisted one, logging the user out at random.
+ * Collapsing them onto one promise means exactly one rotation per expiry.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+function refreshToken(): Promise<string | null> {
+  refreshInFlight ??= performRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function performRefresh(): Promise<string | null> {
   const refresh = localStorage.getItem("refresh_token");
   if (!refresh) return null;
   try {
@@ -33,7 +72,13 @@ async function refreshToken(): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // The refresh token itself is dead — clear both so the app can send the
+      // user to /login instead of retrying with credentials that cannot work.
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      return null;
+    }
     const data: TokenPair = await res.json();
     localStorage.setItem("access_token", data.access);
     localStorage.setItem("refresh_token", data.refresh);
@@ -43,6 +88,29 @@ async function refreshToken(): Promise<string | null> {
   }
 }
 
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 && token) {
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      headers["Authorization"] = `Bearer ${refreshed}`;
+      res = await fetch(url, { ...options, headers });
+    }
+  }
+
+  // Checked once, after any retry — the retried response used to be returned
+  // unchecked, handing callers an error body to .json().
+  if (!res.ok) throw await toApiError(res);
+  return res;
+}
+
 export const apiClient = {
   async register(username: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/auth/register/`, {
@@ -50,7 +118,9 @@ export const apiClient = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
     });
-    if (!res.ok) throw new Error("Registration failed");
+    // Surfaces the real reason ("A user with that username already exists.",
+    // "This password is too common.") instead of a blanket failure message.
+    if (!res.ok) throw await toApiError(res);
     return res.json();
   },
 
@@ -60,7 +130,7 @@ export const apiClient = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-    if (!res.ok) throw new Error("Login failed");
+    if (!res.ok) throw await toApiError(res);
     return res.json();
   },
 
@@ -146,7 +216,7 @@ export const apiClient = {
 
   async getPublicDashboard(slug: string): Promise<DashboardDetail> {
     const res = await fetch(`${API_BASE_URL}/dashboards/shared/${slug}/`);
-    if (!res.ok) throw new Error("Dashboard not found");
+    if (!res.ok) throw await toApiError(res);
     return res.json();
   },
 

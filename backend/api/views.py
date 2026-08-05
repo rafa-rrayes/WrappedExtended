@@ -1,5 +1,5 @@
+import uuid
 from datetime import timedelta
-from itertools import chain
 
 import stripe
 from django.conf import settings as django_settings
@@ -37,7 +37,9 @@ User = get_user_model()
 
 
 def get_or_create_stripe_customer(user):
-    profile = UserProfile.objects.get(user=user)
+    # get_or_create, not get: a profile row is not guaranteed for users created
+    # outside RegisterSerializer (superusers, admin, fixtures).
+    profile, _ = UserProfile.objects.get_or_create(user=user)
     if profile.stripe_customer_id:
         return profile.stripe_customer_id
     customer = stripe.Customer.create(email=user.email, metadata={"user_id": str(user.id)})
@@ -112,8 +114,25 @@ class UploadCreateView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Upload to S3
-        file_key = f"uploads/{request.user.id}/{file.name}"
+        # Enforce the size cap *before* writing to S3, so an oversized (or hostile)
+        # upload cannot consume storage. Unauthenticated-adjacent cost control.
+        max_bytes = django_settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        if file.size > max_bytes:
+            return Response(
+                {
+                    "detail": (
+                        f"File is too large ({file.size / 1024 / 1024:.0f} MB). "
+                        f"The limit is {django_settings.MAX_UPLOAD_SIZE_MB} MB."
+                    )
+                },
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+
+        # Upload to S3 under a key unique per upload. Keying on the filename alone
+        # let a repeat upload of "my_spotify_data.zip" overwrite the previous object —
+        # and made deleting one upload destroy another upload's data.
+        upload_id = uuid.uuid4()
+        file_key = f"uploads/{request.user.id}/{upload_id}/{file.name}"
         upload_file_to_s3(file, file_key)
 
         # Superusers and users who already paid skip Stripe
@@ -121,6 +140,7 @@ class UploadCreateView(generics.CreateAPIView):
         if profile.has_paid or request.user.is_superuser:
             # Already paid — skip Stripe checkout, start processing immediately
             upload = Upload.objects.create(
+                id=upload_id,
                 user=request.user,
                 file_key=file_key,
                 original_filename=file.name,
@@ -134,6 +154,7 @@ class UploadCreateView(generics.CreateAPIView):
 
         # First-time payment — create upload in pending_payment state
         upload = Upload.objects.create(
+            id=upload_id,
             user=request.user,
             file_key=file_key,
             original_filename=file.name,
@@ -281,7 +302,14 @@ def stripe_webhook(request):
             except stripe.StripeError:
                 pass
         payment.receipt_url = receipt_url
-        payment.save(update_fields=["status", "stripe_payment_intent_id", "receipt_url", "updated_at"])
+        payment.save(
+            update_fields=[
+                "status",
+                "stripe_payment_intent_id",
+                "receipt_url",
+                "updated_at",
+            ]
+        )
 
         # Mark user as paid (one-time unlock) and backfill stripe_customer_id
         profile, _ = UserProfile.objects.get_or_create(user=payment.user)

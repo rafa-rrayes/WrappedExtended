@@ -28,8 +28,8 @@ class LogoutSerializer(serializers.Serializer):
     def validate_refresh(self, value):
         try:
             self.token = RefreshToken(value)
-        except Exception:
-            raise serializers.ValidationError("Invalid or expired token.")
+        except Exception as exc:
+            raise serializers.ValidationError("Invalid or expired token.") from exc
         return value
 
     def save(self):

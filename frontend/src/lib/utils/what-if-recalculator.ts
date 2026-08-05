@@ -1,4 +1,4 @@
-import type { DashboardData, ArtistStat, TrackStat } from "@/types/dashboard";
+import type { DashboardData } from "@/types/dashboard";
 
 export interface WhatIfDelta {
   field: string;
