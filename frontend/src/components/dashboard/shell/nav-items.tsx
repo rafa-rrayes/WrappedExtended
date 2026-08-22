@@ -1,63 +1,10 @@
 import type { ReactNode } from "react";
+import type { NavIconName } from "./nav-routes";
 
-/**
- * The dashboard route map.
- *
- * Single source of truth for the sidebar, the command palette's jump targets and anything
- * else that needs to know what routes exist. `segment` is appended to
- * `/dashboard/{id}` — the empty string is the Overview index route.
- */
-export interface DashboardNavItem {
-  segment: string;
-  label: string;
-  icon: NavIconName;
-  /** Rendered under a small caps group heading in the sidebar. */
-  group?: string;
-}
-
-export type NavIconName =
-  | "overview"
-  | "story"
-  | "artists"
-  | "tracks"
-  | "albums"
-  | "time"
-  | "habits"
-  | "discovery"
-  | "compare"
-  | "insights"
-  | "lab";
-
-export const DASHBOARD_NAV: DashboardNavItem[] = [
-  { segment: "", label: "Overview", icon: "overview" },
-  { segment: "/story", label: "Story", icon: "story" },
-  { segment: "/artists", label: "Artists", icon: "artists", group: "Library" },
-  { segment: "/tracks", label: "Tracks", icon: "tracks", group: "Library" },
-  { segment: "/albums", label: "Albums", icon: "albums", group: "Library" },
-  { segment: "/time", label: "Time", icon: "time" },
-  { segment: "/habits", label: "Habits", icon: "habits" },
-  { segment: "/discovery", label: "Discovery", icon: "discovery" },
-  { segment: "/compare", label: "Compare", icon: "compare" },
-  { segment: "/insights", label: "Insights", icon: "insights" },
-  { segment: "/lab", label: "Lab", icon: "lab" },
-];
-
-/** `/dashboard/{id}` + segment. */
-export function navHref(dashboardId: string, segment: string): string {
-  return `/dashboard/${dashboardId}${segment}`;
-}
-
-/**
- * Is `pathname` inside this nav item?
- *
- * The index route needs an exact match; everything else matches its subtree so that
- * `/artists/Radiohead` still lights up "Artists".
- */
-export function isNavActive(pathname: string, dashboardId: string, segment: string): boolean {
-  const base = `/dashboard/${dashboardId}`;
-  if (segment === "") return pathname === base || pathname === `${base}/`;
-  return pathname === base + segment || pathname.startsWith(`${base}${segment}/`);
-}
+// The route map and URL helpers live in `nav-routes.ts` (pure TS, unit-tested); this file
+// adds the icons. Re-exported so every importer keeps one import path.
+export { DASHBOARD_NAV, isNavActive, navHref } from "./nav-routes";
+export type { DashboardNavItem, NavIconName } from "./nav-routes";
 
 const PATHS: Record<NavIconName, ReactNode> = {
   overview: (

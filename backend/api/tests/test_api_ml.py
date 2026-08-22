@@ -43,11 +43,14 @@ def _age(insight, delta):
 # ── Auth and ownership ───────────────────────────────────────────────────────────────
 
 
-def test_anonymous_get_is_rejected(anon_client, dashboard):
-    assert anon_client.get(ml_url(dashboard)).status_code == 401
+def test_anonymous_get_on_a_private_dashboard_is_404(anon_client, dashboard):
+    """The read side follows the other feature views: private looks nonexistent, public
+    (test_api_public_access.py) is readable without a token."""
+    assert anon_client.get(ml_url(dashboard)).status_code == 404
 
 
 def test_anonymous_compute_is_rejected(anon_client, dashboard):
+    """Compute keeps `IsAuthenticated`: it is the one feature endpoint with a side effect."""
     assert anon_client.post(compute_url(dashboard)).status_code == 401
 
 

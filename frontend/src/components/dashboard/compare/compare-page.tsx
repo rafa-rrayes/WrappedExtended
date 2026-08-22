@@ -44,7 +44,7 @@ import { useComparePeriods } from "./use-compare-periods";
  * SWR can hand back an instant result when you flip between pairs you've already seen.
  */
 export function ComparePage() {
-  const { dashboardId, stats, bounds } = useDashboardContext();
+  const { dashboardId, basePath, stats, bounds } = useDashboardContext();
 
   // `bounds` is the authority, but a dashboard row with null dates can still describe its
   // span inside the analyzer output — fall back to that before giving up on the page.
@@ -107,7 +107,7 @@ export function ComparePage() {
       ) : (
         <>
           <PeriodSelector
-            dashboardId={dashboardId}
+            basePath={basePath}
             a={periods.a}
             b={periods.b}
             min={min}

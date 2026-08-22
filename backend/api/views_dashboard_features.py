@@ -2,7 +2,7 @@
 
 import logging
 
-from rest_framework import status
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
@@ -22,21 +22,48 @@ from .serializers_features import (
 logger = logging.getLogger(__name__)
 
 
+def resolve_dashboard(request, dashboard_id, *, public_ok=True):
+    """The dashboard this request may read, or None.
+
+    The owner always gets theirs. Anyone at all — signed in or not — gets a dashboard whose
+    owner switched on public sharing, which is what lets `/shared/{slug}` and `/demo` run
+    the same interactive features as the owner's own view. Everything else is None, and
+    every caller turns None into a plain 404: a private dashboard has to be
+    indistinguishable from an id that was never issued, and that holds for anonymous
+    callers too (they get a 404, not a 401 that would confirm there is something to log
+    in for).
+    """
+    try:
+        dashboard = ProcessedDashboard.objects.get(id=dashboard_id)
+    except ProcessedDashboard.DoesNotExist:
+        return None
+    if request.user.is_authenticated and dashboard.user_id == request.user.id:
+        return dashboard
+    if public_ok and dashboard.is_public:
+        return dashboard
+    return None
+
+
 class DashboardFeatureMixin:
     """Shared logic for loading dashboard + Parquet DataFrame.
 
     Every view using this mixin deserializes a whole user Parquet into memory, so they all
-    share the `dashboard_query` throttle bucket on top of the usual per-user rate.
+    share the `dashboard_query` throttle bucket on top of the usual per-user rate. For an
+    anonymous reader of a public dashboard both buckets are keyed by IP instead.
+
+    Access is decided by `resolve_dashboard`, not by the permission class: the views are
+    `AllowAny` so that a public dashboard can be read without a token, and a view that
+    does more than read (enqueues work, mutates state) sets `public_readable = False` to
+    stay owner-only.
     """
 
+    permission_classes = (permissions.AllowAny,)
     throttle_scope = "dashboard_query"
     throttle_classes = (UserRateThrottle, ScopedRateThrottle)
+    public_readable = True
 
     def get_dashboard(self, request, dashboard_id):
-        try:
-            return ProcessedDashboard.objects.get(id=dashboard_id, user=request.user)
-        except ProcessedDashboard.DoesNotExist:
-            return None
+        return resolve_dashboard(request, dashboard_id, public_ok=self.public_readable)
 
     def load_df(self, dashboard):
         if not dashboard.parquet_key:
@@ -185,10 +212,18 @@ class WhatIfView(DashboardFeatureMixin, APIView):
 
 
 class BenchmarksView(APIView):
+    """Percentile comparisons against `GlobalBenchmark`.
+
+    Not a `DashboardFeatureMixin` view on purpose: it reads the row's stored totals, never
+    the Parquet, so it does not belong in the `dashboard_query` bucket. It shares the
+    mixin's access rule, though — a public dashboard's benchmarks are part of its page.
+    """
+
+    permission_classes = (permissions.AllowAny,)
+
     def get(self, request, dashboard_id):
-        try:
-            dashboard = ProcessedDashboard.objects.get(id=dashboard_id, user=request.user)
-        except ProcessedDashboard.DoesNotExist:
+        dashboard = resolve_dashboard(request, dashboard_id)
+        if not dashboard:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
         benchmarks = {b.metric: b.percentiles for b in GlobalBenchmark.objects.all()}

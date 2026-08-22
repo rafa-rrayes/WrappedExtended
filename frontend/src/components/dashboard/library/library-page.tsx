@@ -20,7 +20,7 @@ import { PAGE_SIZE, useLibraryParams } from "./use-library-params";
  * means paging swaps rows in place instead of blanking the table on every click.
  */
 export function LibraryPage({ type }: { type: EntityType }) {
-  const { dashboardId, bounds } = useDashboardContext();
+  const { dashboardId, basePath, bounds } = useDashboardContext();
   const { from, to, isFiltered } = useDateRange(bounds);
   const withRange = useRangeHref();
   const { q, sort, order, page, setQuery, toggleSort, setPage, clearSearch } =
@@ -83,7 +83,7 @@ export function LibraryPage({ type }: { type: EntityType }) {
         <>
           <EntityTable
             type={type}
-            dashboardId={dashboardId}
+            basePath={basePath}
             rows={data.results}
             sort={sort}
             order={order}

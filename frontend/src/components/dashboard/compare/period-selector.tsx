@@ -13,7 +13,7 @@ import {
 import type { ComparePreset } from "./use-compare-periods";
 
 interface PeriodSelectorProps {
-  dashboardId: string;
+  basePath: string;
   a: Period;
   b: Period;
   min: string;
@@ -24,7 +24,7 @@ interface PeriodSelectorProps {
 }
 
 export function PeriodSelector({
-  dashboardId,
+  basePath,
   a,
   b,
   min,
@@ -76,7 +76,7 @@ export function PeriodSelector({
           color={PERIOD_A_COLOR}
           min={min}
           max={max}
-          dashboardId={dashboardId}
+          basePath={basePath}
           onChange={(next) => onChange({ a: next, b })}
         />
 
@@ -108,7 +108,7 @@ export function PeriodSelector({
           color={PERIOD_B_COLOR}
           min={min}
           max={max}
-          dashboardId={dashboardId}
+          basePath={basePath}
           onChange={(next) => onChange({ a, b: next })}
         />
       </div>
@@ -129,7 +129,7 @@ function PeriodEditor({
   color,
   min,
   max,
-  dashboardId,
+  basePath,
   onChange,
 }: {
   slot: "A" | "B";
@@ -137,7 +137,7 @@ function PeriodEditor({
   color: string;
   min: string;
   max: string;
-  dashboardId: string;
+  basePath: string;
   onChange: (period: Period) => void;
 }) {
   return (
@@ -179,7 +179,7 @@ function PeriodEditor({
           {formatShortDate(period.start)} → {formatShortDate(period.end)}
         </span>
         <Link
-          href={`/dashboard/${dashboardId}?from=${period.start}&to=${period.end}`}
+          href={`${basePath}?from=${period.start}&to=${period.end}`}
           className="shrink-0 text-[0.65rem] text-text-secondary underline-offset-2 transition-colors hover:text-green hover:underline"
         >
           Open in dashboard

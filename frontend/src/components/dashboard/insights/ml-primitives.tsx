@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { entityHref } from "@/components/dashboard/library/entity-meta";
 
 /**
  * Shared furniture for the Insights page.
@@ -183,19 +184,19 @@ export function MlChip({
 
 /** Link to an artist's page; every artist name on this page routes through here. */
 export function ArtistLink({
-  dashboardId,
+  basePath,
   artist,
   className,
   children,
 }: {
-  dashboardId: string;
+  basePath: string;
   artist: string;
   className?: string;
   children?: React.ReactNode;
 }) {
   return (
     <Link
-      href={`/dashboard/${dashboardId}/artists/${encodeURIComponent(artist)}`}
+      href={entityHref(basePath, "artist", artist)}
       className={cn("transition-colors hover:text-green", className)}
     >
       {children ?? artist}

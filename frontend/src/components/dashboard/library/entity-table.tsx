@@ -10,7 +10,7 @@ import { SortArrow } from "./entity-table-toolbar";
 
 interface EntityTableProps {
   type: EntityType;
-  dashboardId: string;
+  basePath: string;
   rows: EntityListItem[];
   sort: EntitySort;
   order: SortOrder;
@@ -23,7 +23,7 @@ interface EntityTableProps {
 
 export function EntityTable({
   type,
-  dashboardId,
+  basePath,
   rows,
   sort,
   order,
@@ -62,7 +62,7 @@ export function EntityTable({
                 key={`${row.rank}-${row.name}-${row.artist_name ?? ""}`}
                 row={row}
                 columns={columns}
-                dashboardId={dashboardId}
+                basePath={basePath}
                 type={type}
                 withRange={withRange}
               />
@@ -76,7 +76,7 @@ export function EntityTable({
         {rows.map((row) => (
           <li key={`${row.rank}-${row.name}-${row.artist_name ?? ""}`}>
             <Link
-              href={withRange(entityHref(dashboardId, type, row.name, row.artist_name))}
+              href={withRange(entityHref(basePath, type, row.name, row.artist_name))}
               className="block rounded-[var(--radius-card)] border border-border bg-bg-card p-3.5 transition-colors active:bg-bg-card-hover"
             >
               <div className="flex items-start gap-3">
@@ -164,18 +164,18 @@ function HeaderCell({
 function EntityRow({
   row,
   columns,
-  dashboardId,
+  basePath,
   type,
   withRange,
 }: {
   row: EntityListItem;
   columns: EntityColumn[];
-  dashboardId: string;
+  basePath: string;
   type: EntityType;
   withRange: (href: string) => string;
 }) {
   const router = useRouter();
-  const href = withRange(entityHref(dashboardId, type, row.name, row.artist_name));
+  const href = withRange(entityHref(basePath, type, row.name, row.artist_name));
 
   return (
     <tr

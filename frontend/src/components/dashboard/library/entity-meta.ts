@@ -8,7 +8,7 @@ import type { EntityType } from "@/types/dashboard";
  */
 export interface EntityMeta {
   type: EntityType;
-  /** URL segment under `/dashboard/{id}`. */
+  /** URL segment under the dashboard's base path. */
   segment: "artists" | "tracks" | "albums";
   singular: string;
   plural: string;
@@ -62,8 +62,8 @@ export const ENTITY_META: Record<EntityType, EntityMeta> = {
   },
 };
 
-export function libraryHref(dashboardId: string, type: EntityType): string {
-  return `/dashboard/${dashboardId}/${ENTITY_META[type].segment}`;
+export function libraryHref(basePath: string, type: EntityType): string {
+  return `${basePath}/${ENTITY_META[type].segment}`;
 }
 
 /**
@@ -78,12 +78,12 @@ export function libraryHref(dashboardId: string, type: EntityType): string {
  * their stats merged. It is meaningless for artists, whose name is already the key.
  */
 export function entityHref(
-  dashboardId: string,
+  basePath: string,
   type: EntityType,
   name: string,
   artist?: string | null,
 ): string {
-  const path = `${libraryHref(dashboardId, type)}/${encodeURIComponent(name)}`;
+  const path = `${libraryHref(basePath, type)}/${encodeURIComponent(name)}`;
   if (type === "artist" || !artist) return path;
   return `${path}?artist=${encodeURIComponent(artist)}`;
 }

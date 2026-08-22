@@ -67,21 +67,32 @@ function Block({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-white/[0.05] ${className ?? ""}`} />;
 }
 
+const OWNER_MISSING = {
+  title: "This dashboard doesn't exist",
+  body: "The link may be out of date, or the dashboard may have been deleted.",
+};
+const OWNER_ESCAPE = { href: "/dashboards", label: "All dashboards" };
+
 /**
  * Terminal state for the shell's own fetch.
  *
  * A 404 is not a failure the reader can retry their way out of — the dashboard is gone, or
- * belongs to someone else — so it gets different copy and a different action from a
- * transient network or server error.
+ * belongs to someone else, or was never made public — so it gets different copy and a
+ * different action from a transient network or server error. The public shells pass their
+ * own `missing` copy and `escape` link; the defaults are the owner's.
  */
 export function ShellError({
   message,
   status,
   onRetry,
+  missing: missingCopy = OWNER_MISSING,
+  escape = OWNER_ESCAPE,
 }: {
   message?: string;
   status?: number;
   onRetry: () => void;
+  missing?: { title: string; body: string };
+  escape?: { href: string; label: string };
 }) {
   const missing = status === 404;
 
@@ -116,20 +127,20 @@ export function ShellError({
         </span>
 
         <h1 className="mb-2 font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
-          {missing ? "This dashboard doesn't exist" : "Couldn't load this dashboard"}
+          {missing ? missingCopy.title : "Couldn't load this dashboard"}
         </h1>
         <p className="mb-6 text-sm text-text-secondary">
           {missing
-            ? "The link may be out of date, or the dashboard may have been deleted."
-            : (message ?? "Something went wrong while fetching your listening data.")}
+            ? missingCopy.body
+            : (message ?? "Something went wrong while fetching the listening data.")}
         </p>
 
         {missing ? (
           <Link
-            href="/dashboards"
+            href={escape.href}
             className="inline-block rounded-full bg-green px-6 py-2.5 text-sm font-semibold text-bg-deep transition-opacity hover:opacity-90"
           >
-            All dashboards
+            {escape.label}
           </Link>
         ) : (
           <button

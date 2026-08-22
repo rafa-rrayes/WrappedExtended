@@ -43,8 +43,13 @@ def compare_url(dashboard):
 
 
 @pytest.mark.parametrize("url_for", [browse_url, detail_url, compare_url])
-def test_anonymous_requests_are_rejected(anon_client, dashboard, url_for):
-    assert anon_client.get(url_for(dashboard)).status_code == 401
+def test_anonymous_requests_to_a_private_dashboard_are_404(anon_client, dashboard, url_for):
+    """Not 401: a private dashboard must look nonexistent to a stranger, and a 401 would
+    say "there is something here, log in". Public dashboards are covered in
+    test_api_public_access.py."""
+    response = anon_client.get(url_for(dashboard))
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found."}
 
 
 @pytest.mark.parametrize("url_for", [browse_url, detail_url, compare_url])

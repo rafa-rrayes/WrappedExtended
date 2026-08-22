@@ -16,10 +16,10 @@ import {
 } from "./ml-primitives";
 
 export function SequenceModelSection({
-  dashboardId,
+  basePath,
   sequenceModel,
 }: {
-  dashboardId: string;
+  basePath: string;
   sequenceModel?: MLSequenceModel | null;
 }) {
   const available = Boolean(sequenceModel?.available);
@@ -153,7 +153,7 @@ export function SequenceModelSection({
                   <li key={sample.after} className="border-b border-border pb-3 last:border-0 last:pb-0">
                     <p className="text-sm font-semibold text-text-primary">
                       After{" "}
-                      <ArtistLink dashboardId={dashboardId} artist={sample.after}>
+                      <ArtistLink basePath={basePath} artist={sample.after}>
                         {sample.after}
                       </ArtistLink>
                     </p>
@@ -161,7 +161,7 @@ export function SequenceModelSection({
                       {asArray(sample.predicts).map((artist, index) => (
                         <ArtistLink
                           key={`${sample.after}-${artist}`}
-                          dashboardId={dashboardId}
+                          basePath={basePath}
                           artist={artist}
                           className="rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-xs text-text-secondary hover:border-green/30"
                         >

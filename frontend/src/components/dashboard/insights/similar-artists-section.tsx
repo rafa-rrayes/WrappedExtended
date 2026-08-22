@@ -18,10 +18,10 @@ import {
  * neighbour list — no extra requests, everything already came down with the payload.
  */
 export function SimilarArtistsSection({
-  dashboardId,
+  basePath,
   embeddings,
 }: {
-  dashboardId: string;
+  basePath: string;
   embeddings?: MLEmbeddings | null;
 }) {
   const artists = useMemo(() => {
@@ -113,7 +113,7 @@ export function SimilarArtistsSection({
                     <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-text-primary">
                       Closest to{" "}
                       <ArtistLink
-                        dashboardId={dashboardId}
+                        basePath={basePath}
                         artist={selected}
                         className="text-green"
                       />
@@ -125,7 +125,7 @@ export function SimilarArtistsSection({
                     {neighbors.map((neighbor) => (
                       <li key={neighbor.artist} className="flex items-center gap-3">
                         <ArtistLink
-                          dashboardId={dashboardId}
+                          basePath={basePath}
                           artist={neighbor.artist}
                           className="w-[38%] shrink-0 truncate text-sm text-text-secondary"
                         />

@@ -34,15 +34,13 @@ export function DeepDiveModal({ entity, dashboardId, data, onClose }: DeepDiveMo
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // No token is fine: the endpoint serves a public dashboard to anonymous readers too.
     const token = localStorage.getItem("access_token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     fetch(
       `${API_BASE_URL}/dashboards/${dashboardId}/search/?q=${encodeURIComponent(entity.name)}&type=${entity.type}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers }
     )
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {

@@ -1,7 +1,9 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { EntityDetailPage } from "@/components/dashboard/library/entity-detail-page";
 
 export default function AlbumDetailRoute() {
-  return <EntityDetailPage type="album" />;
+  const { name } = useParams<{ name: string }>();
+  return <EntityDetailPage type="album" name={name} />;
 }

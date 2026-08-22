@@ -28,11 +28,13 @@ const MAX_ENTITY_RESULTS = 8;
 
 interface CommandPaletteProps {
   dashboardId: string;
+  /** URL prefix for the jump targets — see `DashboardContextValue.basePath`. */
+  basePath: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CommandPalette({ dashboardId, open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({ dashboardId, basePath, open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const withRange = useRangeHref();
   const [query, setQuery] = useState("");
@@ -110,7 +112,7 @@ export function CommandPalette({ dashboardId, open, onOpenChange }: CommandPalet
       label: item.label,
       hint: item.group,
       icon: item.icon,
-      href: withRange(navHref(dashboardId, item.segment)),
+      href: withRange(navHref(basePath, item.segment)),
     }));
 
     const artists: PaletteItem[] = suggestions.artists
@@ -121,7 +123,7 @@ export function CommandPalette({ dashboardId, open, onOpenChange }: CommandPalet
         label: name,
         icon: "artists",
         href: withRange(
-          `${navHref(dashboardId, "/artists")}/${encodeURIComponent(name)}`,
+          `${navHref(basePath, "/artists")}/${encodeURIComponent(name)}`,
         ),
       }));
 
@@ -134,12 +136,12 @@ export function CommandPalette({ dashboardId, open, onOpenChange }: CommandPalet
         hint: track.artist_name ?? undefined,
         icon: "tracks",
         href: withRange(
-          `${navHref(dashboardId, "/tracks")}/${encodeURIComponent(track.track_name)}`,
+          `${navHref(basePath, "/tracks")}/${encodeURIComponent(track.track_name)}`,
         ),
       }));
 
     return [...artists, ...tracks, ...routes];
-  }, [query, suggestions, dashboardId, withRange]);
+  }, [query, suggestions, basePath, withRange]);
 
   useEffect(() => {
     setActiveIndex(0);

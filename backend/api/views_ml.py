@@ -13,7 +13,7 @@ import logging
 from datetime import timedelta
 
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -55,7 +55,14 @@ class MLInsightsView(DashboardFeatureMixin, APIView):
 
 
 class MLInsightsComputeView(DashboardFeatureMixin, APIView):
-    """Enqueue an ML run. Never queues a second one on top of an in-flight run."""
+    """Enqueue an ML run. Never queues a second one on top of an in-flight run.
+
+    The one feature endpoint with a side effect, so unlike its siblings it is the owner's
+    alone: a public dashboard can be *read* by anyone, but only its owner burns a worker.
+    """
+
+    permission_classes = (permissions.IsAuthenticated,)
+    public_readable = False
 
     def post(self, request, dashboard_id):
         dashboard = self.get_dashboard(request, dashboard_id)
