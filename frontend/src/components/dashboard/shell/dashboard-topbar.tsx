@@ -10,6 +10,8 @@ import { DateRangePicker } from "./date-range-picker";
 
 interface DashboardTopbarProps {
   dashboardId: string;
+  /** The switcher lists *your* dashboards, so a guest on a public dashboard gets a plain title. */
+  isOwner: boolean;
   title: string;
   bounds: DateRangeBounds;
   onOpenNav: () => void;
@@ -18,6 +20,7 @@ interface DashboardTopbarProps {
 
 export function DashboardTopbar({
   dashboardId,
+  isOwner,
   title,
   bounds,
   onOpenNav,
@@ -45,7 +48,13 @@ export function DashboardTopbar({
         </svg>
       </button>
 
-      <DashboardSwitcher dashboardId={dashboardId} title={title} />
+      {isOwner ? (
+        <DashboardSwitcher dashboardId={dashboardId} title={title} />
+      ) : (
+        <h1 className="min-w-0 truncate px-2 py-1.5 font-[family-name:var(--font-display)] text-sm font-semibold text-text-primary">
+          {title}
+        </h1>
+      )}
 
       {/* `shrink-0` makes the dashboard title absorb the squeeze on a narrow viewport — it
           already truncates, whereas the search and date controls would just overflow. */}

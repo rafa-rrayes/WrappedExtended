@@ -15,6 +15,7 @@ import {
 } from "./ml-primitives";
 import { buildSceneColors, SCENE_FALLBACK_COLOR, sceneLabel } from "./scene-palette";
 import { TasteMapCanvas, type TasteMapHandle, type TasteMapHover } from "./taste-map-canvas";
+import { entityHref } from "@/components/dashboard/library/entity-meta";
 
 const DESKTOP_HEIGHT = 560;
 const MOBILE_HEIGHT = 380;
@@ -22,10 +23,10 @@ const DESKTOP_LABELS = 26;
 const MOBILE_LABELS = 8;
 
 export function TasteMapSection({
-  dashboardId,
+  basePath,
   embeddings,
 }: {
-  dashboardId: string;
+  basePath: string;
   embeddings: MLEmbeddings | null | undefined;
 }) {
   const router = useRouter();
@@ -49,9 +50,9 @@ export function TasteMapSection({
 
   const handleSelect = useCallback(
     (artist: string) => {
-      router.push(`/dashboard/${dashboardId}/artists/${encodeURIComponent(artist)}`);
+      router.push(entityHref(basePath, "artist", artist));
     },
-    [router, dashboardId],
+    [router, basePath],
   );
 
   const method =
@@ -237,7 +238,7 @@ export function TasteMapSection({
                   .map((artist) => (
                     <ArtistLink
                       key={artist}
-                      dashboardId={dashboardId}
+                      basePath={basePath}
                       artist={artist}
                       className="text-sm text-text-secondary"
                     />

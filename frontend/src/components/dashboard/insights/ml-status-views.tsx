@@ -38,10 +38,13 @@ export function MlEmptyState({
   onRun,
   isStarting,
   error,
+  canRun = true,
 }: {
   onRun: () => void;
   isStarting: boolean;
   error: string | null;
+  /** False for a guest on a public dashboard: only the owner can start a run. */
+  canRun?: boolean;
 }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-bg-card p-6 sm:p-10">
@@ -50,32 +53,47 @@ export function MlEmptyState({
           <span className="mb-2 block font-[family-name:var(--font-display)] text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-green">
             Machine learning
           </span>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold leading-tight text-text-primary sm:text-3xl">
-            Train five models on <span className="text-green">your</span> listening history
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
-            Your dashboard counts what you played. This goes further: it learns the shape of
-            your taste from the order you played things in — which artists live next to each
-            other in your head, what kind of listener you are in a given session, what makes
-            you hit skip, and where your listening is heading next.
-          </p>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
-            Everything runs on your own data, on our servers, once. It takes a couple of
-            minutes — you can leave this page and come back.
-          </p>
+          {canRun ? (
+            <>
+              <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold leading-tight text-text-primary sm:text-3xl">
+                Train five models on <span className="text-green">your</span> listening history
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
+                Your dashboard counts what you played. This goes further: it learns the shape
+                of your taste from the order you played things in — which artists live next to
+                each other in your head, what kind of listener you are in a given session, what
+                makes you hit skip, and where your listening is heading next.
+              </p>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
+                Everything runs on your own data, on our servers, once. It takes a couple of
+                minutes — you can leave this page and come back.
+              </p>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Button onClick={onRun} disabled={isStarting} className="px-7 py-2.5 text-sm">
-              {isStarting ? "Starting…" : "Run analysis"}
-            </Button>
-            <span className="text-xs text-text-muted">Takes ~1–3 minutes</span>
-          </div>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Button onClick={onRun} disabled={isStarting} className="px-7 py-2.5 text-sm">
+                  {isStarting ? "Starting…" : "Run analysis"}
+                </Button>
+                <span className="text-xs text-text-muted">Takes ~1–3 minutes</span>
+              </div>
 
-          {error ? (
-            <p className="mt-3 text-sm text-gold" role="alert">
-              {error}
-            </p>
-          ) : null}
+              {error ? (
+                <p className="mt-3 text-sm text-gold" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold leading-tight text-text-primary sm:text-3xl">
+                No analysis to show yet
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
+                The owner of this dashboard hasn&apos;t run the models on it. When they do,
+                this page fills with taste clusters, session types, skip drivers and a
+                forecast of where the listening is heading.
+              </p>
+            </>
+          )}
         </div>
 
         <ul className="space-y-2.5">
@@ -156,11 +174,14 @@ export function MlFailedState({
   onRetry,
   isStarting,
   startError,
+  canRun = true,
 }: {
   message?: string;
   onRetry: () => void;
   isStarting: boolean;
   startError: string | null;
+  /** False for a guest on a public dashboard: only the owner can start a run. */
+  canRun?: boolean;
 }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-bg-card p-6 sm:p-10">
@@ -185,13 +206,17 @@ export function MlFailedState({
         </h1>
         <p className="mt-2 text-sm text-text-secondary">
           {message ??
-            "Something went wrong while training the models on your history. Running it again usually clears it."}
+            (canRun
+              ? "Something went wrong while training the models on your history. Running it again usually clears it."
+              : "Something went wrong while training the models on this history. Its owner can run it again.")}
         </p>
-        <div className="mt-6">
-          <Button onClick={onRetry} disabled={isStarting} className="px-7 py-2.5 text-sm">
-            {isStarting ? "Starting…" : "Run it again"}
-          </Button>
-        </div>
+        {canRun ? (
+          <div className="mt-6">
+            <Button onClick={onRetry} disabled={isStarting} className="px-7 py-2.5 text-sm">
+              {isStarting ? "Starting…" : "Run it again"}
+            </Button>
+          </div>
+        ) : null}
         {startError ? (
           <p className="mt-3 text-sm text-gold" role="alert">
             {startError}

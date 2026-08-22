@@ -97,8 +97,19 @@ date-range control, ⌘K search) wrapping ten routes: Overview (`/`), `story` (t
 `[name]` detail page), `time`, `habits`, `discovery`, `compare`, `insights`, `lab`.
 
 The `time` / `habits` / `discovery` routes **re-group the existing chart components** —
-they import the same ones the story scroll does. `/shared/[slug]` and `/demo` keep
-rendering the story scroll, which is the right format for a link someone else opens.
+they import the same ones the story scroll does.
+
+`/shared/[slug]` and `/demo` render **the same application**, read-only. Their layouts mount
+`PublicDashboardShell` (no auth; `usePublicDashboard(slug)`), and a single optional
+catch-all `[[...path]]` page hands every segment to `PublicDashboardRoute`, which maps it
+onto the same view components the owner tree renders one file at a time. The three shells
+share `ShellChrome`; what differs is `DashboardContext.basePath` (`/dashboard/{id}` |
+`/shared/{slug}` | `/demo`) — **every in-dashboard link must be built from it** via
+`navHref` / `libraryHref` / `entityHref`, never from a hard-coded `/dashboard/` — and
+`isOwner`, which gates share/export, the dashboard switcher and the ML run/re-run
+buttons. The backend mirrors this: the feature endpoints are `AllowAny` and
+`resolve_dashboard()` serves a public dashboard to anyone (a private one is 404 to
+everyone but its owner, anonymous included); only ML *compute* stays owner-only.
 
 ### Django Settings
 
@@ -125,7 +136,7 @@ Upload status transitions: `pending_payment` → `pending` → `validating` (10%
 - **Ruff**: Python linter/formatter, line-length 99, target Python 3.12. Migrations are exempt from `E501`/`I001`.
 - **Theme**: Dark theme with CSS custom properties — colors (`--color-green: #1DB954`, `--color-gold: #F5A623`, `--color-negative: #F87171`), fonts (Syne display, Outfit body). Defined in `frontend/src/app/globals.css` via `@theme`.
 - **Focus rings**: one unlayered `:focus-visible` rule in `globals.css` covers the whole app. Unlayered beats *any* Tailwind utility under v4's cascade layers, which is what lets it override the `outline-none` classes already scattered through the components. Don't add per-component focus styles unless you want something richer.
-- **Public dashboards**: Toggle `is_public` + set `share_slug` on `ProcessedDashboard` for unauthenticated access
+- **Public dashboards**: Toggle `is_public` + set `share_slug` on `ProcessedDashboard` for unauthenticated access. Sharing opens the whole interactive app (Time Machine, library browse, journey, compare, ML reads) to the link's holder — anonymous calls are throttled per IP under the same `dashboard_query` scope. The demo is just a public dashboard whose slug is `NEXT_PUBLIC_DEMO_SLUG` (default `demo`).
 
 ## Environment
 

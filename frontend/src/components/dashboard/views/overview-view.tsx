@@ -44,7 +44,7 @@ const ROUTE_BLURBS: Record<string, string> = {
 const HIGHLIGHT_FLEX = "min-w-0 grow basis-[260px]";
 
 export function OverviewView() {
-  const { dashboardId, dashboard } = useDashboardContext();
+  const { basePath, dashboard } = useDashboardContext();
   const { stats, from, to, isFiltered, isLoading, failed } = useScopedStats();
   const withRange = useRangeHref();
 
@@ -65,7 +65,7 @@ export function OverviewView() {
         <div className="flex flex-wrap items-center gap-2">
           <ScopeNotice from={from} to={to} isFiltered={isFiltered} failed={failed} />
           <Link
-            href={withRange(navHref(dashboardId, "/story"))}
+            href={withRange(navHref(basePath, "/story"))}
             className="rounded-full bg-green px-4 py-2 text-sm font-semibold text-bg-deep transition-opacity hover:opacity-90"
           >
             Read the story
@@ -110,7 +110,7 @@ export function OverviewView() {
                   ? `${formatHours(topArtist.hours)} · ${topArtist.plays.toLocaleString()} plays`
                   : undefined
               }
-              href={withRange(navHref(dashboardId, "/artists"))}
+              href={withRange(navHref(basePath, "/artists"))}
               cta="All artists"
             />
             <HighlightCard
@@ -122,7 +122,7 @@ export function OverviewView() {
                   ? `${topTrack.artist_name} · ${topTrack.plays.toLocaleString()} plays`
                   : undefined
               }
-              href={withRange(navHref(dashboardId, "/tracks"))}
+              href={withRange(navHref(basePath, "/tracks"))}
               cta="All tracks"
             />
             <HighlightCard
@@ -134,7 +134,7 @@ export function OverviewView() {
                   ? `${topAlbum.artist_name} · ${formatHours(topAlbum.hours)}`
                   : undefined
               }
-              href={withRange(navHref(dashboardId, "/albums"))}
+              href={withRange(navHref(basePath, "/albums"))}
               cta="All albums"
             />
           </div>
@@ -145,7 +145,7 @@ export function OverviewView() {
               {hasStat(stats.monthly_hours) ? (
                 <ActivityCard
                   data={stats.monthly_hours}
-                  href={withRange(navHref(dashboardId, "/time"))}
+                  href={withRange(navHref(basePath, "/time"))}
                 />
               ) : (
                 <EmptySection
@@ -164,7 +164,7 @@ export function OverviewView() {
                     ? `Longest ${streaks.longest_streak} days · avg ${Math.round(streaks.avg_streak)}`
                     : undefined
                 }
-                href={withRange(navHref(dashboardId, "/habits"))}
+                href={withRange(navHref(basePath, "/habits"))}
                 cta="Habits"
                 emptyNote="No streak data in this export."
               />
@@ -181,7 +181,7 @@ export function OverviewView() {
                 accent={
                   latestYear?.change_pct != null && latestYear.change_pct < 0 ? "gold" : "green"
                 }
-                href={withRange(navHref(dashboardId, "/time"))}
+                href={withRange(navHref(basePath, "/time"))}
                 cta="Timeline"
                 emptyNote="No year-over-year comparison available."
               />
@@ -199,7 +199,7 @@ export function OverviewView() {
               {DASHBOARD_NAV.filter((item) => item.segment !== "").map((item) => (
                 <Link
                   key={item.segment}
-                  href={withRange(navHref(dashboardId, item.segment))}
+                  href={withRange(navHref(basePath, item.segment))}
                   className="group flex min-w-0 grow basis-[240px] items-start gap-3 rounded-[var(--radius-card)] border border-border bg-bg-card p-4 transition-colors hover:border-white/10 hover:bg-bg-card-hover"
                 >
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-elevated text-text-secondary transition-colors group-hover:text-green">

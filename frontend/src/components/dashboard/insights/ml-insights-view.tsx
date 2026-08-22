@@ -28,17 +28,20 @@ const SECTION_LINKS = [
  * whether it has something to draw, so one missing model never takes the page with it.
  */
 export function MlInsightsView({
-  dashboardId,
+  basePath,
   insights,
   onRerun,
   isRerunning,
   isRunning,
   rerunError,
   notice,
+  canRun = true,
 }: {
-  dashboardId: string;
+  basePath: string;
   insights: MLInsights;
   onRerun: () => void;
+  /** False for a guest on a public dashboard: only the owner can re-run the models. */
+  canRun?: boolean;
   /** The enqueue request itself is in flight. */
   isRerunning: boolean;
   /** A run is already executing server-side — these results are the previous ones. */
@@ -72,14 +75,16 @@ export function MlInsightsView({
               >
                 Date filter not applied
               </ScopeIgnoredNotice>
-              <button
-                type="button"
-                onClick={onRerun}
-                disabled={busy}
-                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-text-muted hover:text-text-primary disabled:opacity-50"
-              >
-                {isRunning ? "Analysis running…" : isRerunning ? "Starting…" : "Re-run analysis"}
-              </button>
+              {canRun ? (
+                <button
+                  type="button"
+                  onClick={onRerun}
+                  disabled={busy}
+                  className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-text-muted hover:text-text-primary disabled:opacity-50"
+                >
+                  {isRunning ? "Analysis running…" : isRerunning ? "Starting…" : "Re-run analysis"}
+                </button>
+              ) : null}
             </>
           }
         />
@@ -127,15 +132,15 @@ export function MlInsightsView({
         </nav>
       </div>
 
-      <TasteMapSection dashboardId={dashboardId} embeddings={insights.embeddings} />
+      <TasteMapSection basePath={basePath} embeddings={insights.embeddings} />
       <ListeningModesSection clustering={insights.clustering} />
       <SkipDriversSection skipModel={insights.skip_model} />
       <ForecastSection forecast={insights.forecast} />
       <SequenceModelSection
-        dashboardId={dashboardId}
+        basePath={basePath}
         sequenceModel={insights.sequence_model}
       />
-      <SimilarArtistsSection dashboardId={dashboardId} embeddings={insights.embeddings} />
+      <SimilarArtistsSection basePath={basePath} embeddings={insights.embeddings} />
     </div>
   );
 }

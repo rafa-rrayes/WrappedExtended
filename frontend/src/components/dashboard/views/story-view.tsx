@@ -14,9 +14,7 @@ import { ScopeIgnoredNotice } from "./view-shell";
  * already knows. Data comes from the shell's context — no second fetch.
  */
 export function StoryView() {
-  const { dashboard, refresh } = useDashboardContext();
-  // `DashboardContent` is shared with the public `/shared` and `/demo` routes, which have
-  // no top bar and no `?from&to` — so the notice belongs here, not inside it.
+  const { dashboard, isOwner, refresh } = useDashboardContext();
   const { isFiltered } = useDateRange();
 
   return (
@@ -32,7 +30,7 @@ export function StoryView() {
           </ScopeIgnoredNotice>
         </div>
       )}
-      <DashboardContent data={dashboard} showSharePanel onUpdate={refresh} />
+      <DashboardContent data={dashboard} isOwner={isOwner} onUpdate={refresh} />
     </>
   );
 }

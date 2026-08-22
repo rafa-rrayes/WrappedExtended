@@ -35,10 +35,10 @@ import { useTimeMachineStore } from "@/lib/stores/time-machine";
 /**
  * The single-scroll "Wrapped story".
  *
- * Three surfaces render this: `/dashboard/{id}/story` (authenticated, with the share and
- * export panels) and `/shared/{slug}` + `/demo` (public, read-only). The public routes
- * live outside the dashboard layout, so this component must keep taking its data as a
- * prop — it can never read the dashboard context.
+ * Rendered by `StoryView` on the owner's `/dashboard/{id}/story` and on the public
+ * `/shared/{slug}/story` + `/demo/story`. The search bar, Time Machine toolbar and social
+ * benchmarks work on every one of them (the feature endpoints accept anonymous reads of a
+ * public dashboard); only the share and export panels are the owner's, hence `isOwner`.
  *
  * The interactive tools that used to float over this scroll (chart builder, what-if,
  * journey replay) now live on `/dashboard/{id}/lab` as a real page.
@@ -46,13 +46,14 @@ import { useTimeMachineStore } from "@/lib/stores/time-machine";
 
 interface DashboardContentProps {
   data: DashboardDetail;
-  showSharePanel?: boolean;
+  /** Shows the share and export panels — actions only the dashboard's owner has. */
+  isOwner?: boolean;
   onUpdate?: () => void;
 }
 
 export function DashboardContent({
   data,
-  showSharePanel,
+  isOwner = false,
   onUpdate,
 }: DashboardContentProps) {
   const timeMachine = useTimeMachineStore();
@@ -62,11 +63,9 @@ export function DashboardContent({
     ? timeMachine.filteredData
     : data.dashboard_data;
 
-  const isAuthenticated = showSharePanel !== undefined;
-
   return (
     <>
-      {showSharePanel && (
+      {isOwner && (
         <div className="max-w-[1280px] mx-auto px-6 flex justify-end gap-2 pt-16">
           <ExportPanel data={data} />
           <SharePanel
@@ -78,17 +77,17 @@ export function DashboardContent({
         </div>
       )}
 
-      {/* Feature toolbar */}
-      {isAuthenticated && (
-        <div className="max-w-[1280px] mx-auto px-6 pt-4 flex flex-wrap items-center gap-2">
-          <SearchBar data={stats} dashboardId={data.id} />
-          <TimeMachineToolbar
-            dashboardId={data.id}
-            dateRangeStart={data.date_range_start}
-            dateRangeEnd={data.date_range_end}
-          />
-        </div>
-      )}
+      {/* Feature toolbar — takes the share row's top spacing when there is no share row. */}
+      <div
+        className={`max-w-[1280px] mx-auto px-6 flex flex-wrap items-center gap-2 ${isOwner ? "pt-4" : "pt-16"}`}
+      >
+        <SearchBar data={stats} dashboardId={data.id} />
+        <TimeMachineToolbar
+          dashboardId={data.id}
+          dateRangeStart={data.date_range_start}
+          dateRangeEnd={data.date_range_end}
+        />
+      </div>
 
       <div id="dashboard-content">
         <div data-section="hero-stats">
@@ -173,9 +172,7 @@ export function DashboardContent({
             <div data-section="mood-timeline"><MoodTimeline data={stats.mood_timeline} /></div>
           )}
 
-          {isAuthenticated && (
-            <div data-section="social-benchmarks"><SocialBenchmarks dashboardId={data.id} /></div>
-          )}
+          <div data-section="social-benchmarks"><SocialBenchmarks dashboardId={data.id} /></div>
 
           {stats.weekend_vs_weekday && (
             <div data-section="weekend-weekday"><WeekendWeekday data={stats.weekend_vs_weekday} /></div>

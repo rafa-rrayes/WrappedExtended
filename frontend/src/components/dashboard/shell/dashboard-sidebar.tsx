@@ -9,7 +9,7 @@ import { useRangeHref } from "@/lib/hooks/use-date-range";
 import { DASHBOARD_NAV, NavIcon, isNavActive, navHref } from "./nav-items";
 
 interface DashboardSidebarProps {
-  dashboardId: string;
+  basePath: string;
   /** Desktop rail collapsed to icons only. */
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -19,7 +19,7 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({
-  dashboardId,
+  basePath,
   collapsed,
   onToggleCollapsed,
   mobileOpen,
@@ -49,7 +49,7 @@ export function DashboardSidebar({
         className="hidden md:flex fixed left-0 top-14 bottom-0 z-40 w-[var(--shell-sidebar-w)] flex-col border-r border-border bg-bg-primary/80 backdrop-blur-xl transition-[width] duration-200"
         aria-label="Dashboard sections"
       >
-        <SidebarNav dashboardId={dashboardId} pathname={pathname} collapsed={collapsed} />
+        <SidebarNav basePath={basePath} pathname={pathname} collapsed={collapsed} />
         <button
           type="button"
           onClick={onToggleCollapsed}
@@ -125,7 +125,7 @@ export function DashboardSidebar({
                   </svg>
                 </button>
               </div>
-              <SidebarNav dashboardId={dashboardId} pathname={pathname} collapsed={false} />
+              <SidebarNav basePath={basePath} pathname={pathname} collapsed={false} />
             </m.aside>
           </div>
         )}
@@ -135,11 +135,11 @@ export function DashboardSidebar({
 }
 
 function SidebarNav({
-  dashboardId,
+  basePath,
   pathname,
   collapsed,
 }: {
-  dashboardId: string;
+  basePath: string;
   pathname: string;
   collapsed: boolean;
 }) {
@@ -148,7 +148,7 @@ function SidebarNav({
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4">
       {DASHBOARD_NAV.map((item, index) => {
-        const active = isNavActive(pathname, dashboardId, item.segment);
+        const active = isNavActive(pathname, basePath, item.segment);
         const previousGroup = index > 0 ? DASHBOARD_NAV[index - 1].group : undefined;
         const startsGroup = item.group !== undefined && item.group !== previousGroup;
 
@@ -165,7 +165,7 @@ function SidebarNav({
               </div>
             )}
             <Link
-              href={withRange(navHref(dashboardId, item.segment))}
+              href={withRange(navHref(basePath, item.segment))}
               aria-current={active ? "page" : undefined}
               title={collapsed ? item.label : undefined}
               className={cn(

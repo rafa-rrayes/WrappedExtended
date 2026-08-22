@@ -112,8 +112,13 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
     const refreshed = await refreshToken();
     if (refreshed) {
       headers["Authorization"] = `Bearer ${refreshed}`;
-      res = await fetch(url, { ...options, headers });
+    } else {
+      // The session is gone (tokens cleared). Retry once as a visitor: on a public
+      // dashboard that is a valid request, and a stale token from a week-old login must
+      // not break /shared and /demo. A private endpoint just fails again, as it should.
+      delete headers["Authorization"];
     }
+    res = await fetch(url, { ...options, headers });
   }
 
   // Checked once, after any retry — the retried response used to be returned
@@ -226,7 +231,7 @@ export const apiClient = {
   },
 
   async getPublicDashboard(slug: string): Promise<DashboardDetail> {
-    const res = await fetch(`${API_BASE_URL}/dashboards/shared/${slug}/`);
+    const res = await fetch(`${API_BASE_URL}/dashboards/shared/${encodeURIComponent(slug)}/`);
     if (!res.ok) throw await toApiError(res);
     return res.json();
   },

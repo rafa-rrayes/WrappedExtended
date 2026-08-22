@@ -46,21 +46,31 @@ describe("ENTITY_META", () => {
 
 describe("libraryHref / entityHref", () => {
   it("builds the library route for each type", () => {
-    expect(libraryHref("d1", "artist")).toBe("/dashboard/d1/artists");
-    expect(libraryHref("d1", "track")).toBe("/dashboard/d1/tracks");
-    expect(libraryHref("d1", "album")).toBe("/dashboard/d1/albums");
+    expect(libraryHref("/dashboard/d1", "artist")).toBe("/dashboard/d1/artists");
+    expect(libraryHref("/dashboard/d1", "track")).toBe("/dashboard/d1/tracks");
+    expect(libraryHref("/dashboard/d1", "album")).toBe("/dashboard/d1/albums");
+  });
+
+  it("builds under whichever shell is rendering — owner, shared or demo", () => {
+    // The base is the shell's URL prefix, so a link inside a public dashboard stays public.
+    expect(libraryHref("/shared/my-slug", "artist")).toBe("/shared/my-slug/artists");
+    expect(entityHref("/shared/my-slug", "track", "Alive", "Pearl Jam")).toBe(
+      "/shared/my-slug/tracks/Alive?artist=Pearl%20Jam",
+    );
+    expect(libraryHref("/demo", "album")).toBe("/demo/albums");
+    expect(entityHref("/demo", "artist", "AC/DC")).toBe("/demo/artists/AC%2FDC");
   });
 
   it("percent-encodes a name so it stays inside the [name] segment", () => {
     // Unencoded, "AC/DC" would read as two path segments.
-    expect(entityHref("d1", "artist", "AC/DC")).toBe("/dashboard/d1/artists/AC%2FDC");
-    expect(entityHref("d1", "artist", "Where?")).toBe("/dashboard/d1/artists/Where%3F");
-    expect(entityHref("d1", "artist", "P!nk #1")).toBe("/dashboard/d1/artists/P!nk%20%231");
-    expect(entityHref("d1", "track", "50% Off")).toBe("/dashboard/d1/tracks/50%25%20Off");
+    expect(entityHref("/dashboard/d1", "artist", "AC/DC")).toBe("/dashboard/d1/artists/AC%2FDC");
+    expect(entityHref("/dashboard/d1", "artist", "Where?")).toBe("/dashboard/d1/artists/Where%3F");
+    expect(entityHref("/dashboard/d1", "artist", "P!nk #1")).toBe("/dashboard/d1/artists/P!nk%20%231");
+    expect(entityHref("/dashboard/d1", "track", "50% Off")).toBe("/dashboard/d1/tracks/50%25%20Off");
   });
 
   it("handles non-Latin names", () => {
-    expect(entityHref("d1", "artist", "宇多田ヒカル")).toBe(
+    expect(entityHref("/dashboard/d1", "artist", "宇多田ヒカル")).toBe(
       `/dashboard/d1/artists/${encodeURIComponent("宇多田ヒカル")}`,
     );
   });
@@ -103,7 +113,7 @@ describe("decodeEntityName", () => {
     const names = ["AC/DC", "Where?", "P!nk #1", "50% Off", "Sigur Rós", "宇多田ヒカル", "a b"];
 
     for (const name of names) {
-      const segment = entityHref("d1", "artist", name).split("/").pop() as string;
+      const segment = entityHref("/dashboard/d1", "artist", name).split("/").pop() as string;
       // Next percent-decodes the segment before it reaches the page.
       expect(decodeEntityName(decodeURIComponent(segment))).toBe(name);
     }
