@@ -1,6 +1,6 @@
-# Production backend stack for Dokploy on RRserver (Traefik ingress via Dokploy Domains).
-# Backend → api.wrappedextended.com : backend:8000
-# The frontend is NOT here — it stays on Vercel at https://wrappedextended.com
+# Production backend stack for Dokploy (Traefik ingress via Dokploy Domains).
+# Backend → api.example.com : backend:8000
+# The frontend is NOT here — it stays on Vercel at https://app.example.com
 # and reaches this stack via NEXT_PUBLIC_API_URL.
 # Postgres / Redis / MinIO are internal-only (no published ports).
 # All values come from the Dokploy "Environment" tab via ${VAR} interpolation.

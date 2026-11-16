@@ -1,19 +1,20 @@
 # WrapEx Deployment Guide
 
-Current topology:
+This describes one working topology (the one the author uses). Swap the pieces for
+your own host; `.env.production.example` lists every variable. The domains below
+(`example.com`) are placeholders.
+
+Topology:
 
 | Piece | Where | Notes |
 |---|---|---|
-| Backend + Celery worker + beat | **Dokploy** on RRserver | `docker-compose.dokploy.yml` |
+| Backend + Celery worker + beat | **Dokploy** on your own server | `docker-compose.dokploy.yml` |
 | Postgres, Redis, MinIO | Dokploy, internal-only | No published ports |
 | Frontend | **Vercel** | `frontend/`, deployed from this repo |
 | Ingress / TLS | Cloudflare Tunnel → Traefik | Managed by Dokploy Domains |
 
-`api.wrappedextended.com` → the `backend` service on port 8000.
-`wrappedextended.com` → Vercel, which reaches the API via `NEXT_PUBLIC_API_URL`.
-
-> An earlier revision of this file described a Railway deployment. That is no longer
-> how WrapEx runs; the Railway-specific steps have been removed.
+`api.example.com` → the `backend` service on port 8000.
+`app.example.com` → Vercel, which reaches the API via `NEXT_PUBLIC_API_URL`.
 
 ---
 
@@ -41,14 +42,14 @@ Current topology:
    MINIO_ROOT_USER=<user>
    MINIO_ROOT_PASSWORD=<password>
    SECURE_SSL_REDIRECT=False
-   ALLOWED_HOSTS=api.wrappedextended.com
-   CORS_ALLOWED_ORIGINS=https://wrappedextended.com
-   CSRF_TRUSTED_ORIGINS=https://wrappedextended.com,https://api.wrappedextended.com
-   FRONTEND_URL=https://wrappedextended.com
-   STRIPE_SECRET_KEY=sk_live_...
-   STRIPE_PUBLISHABLE_KEY=pk_live_...
-   STRIPE_PRICE_ID=price_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
+   ALLOWED_HOSTS=api.example.com
+   CORS_ALLOWED_ORIGINS=https://app.example.com
+   CSRF_TRUSTED_ORIGINS=https://app.example.com,https://api.example.com
+   FRONTEND_URL=https://app.example.com
+   STRIPE_SECRET_KEY=<sk_... or blank, see Payments>
+   STRIPE_PUBLISHABLE_KEY=<pk_... or blank>
+   STRIPE_PRICE_ID=<price_... or blank>
+   STRIPE_WEBHOOK_SECRET=<whsec_... or blank>
    ```
 
    Generate a secret key with:
@@ -57,7 +58,7 @@ Current topology:
    python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
    ```
 
-4. Under **Domains**, map `api.wrappedextended.com` → service `backend`, port `8000`.
+4. Under **Domains**, map `api.example.com` → service `backend`, port `8000`.
 
 ### Why `SECURE_SSL_REDIRECT=False`
 
@@ -93,14 +94,27 @@ healthcheck probes.
    - **Framework Preset**: Next.js (auto-detected)
    - **Root Directory**: `frontend`
 3. Environment variables:
-   - `NEXT_PUBLIC_API_URL=https://api.wrappedextended.com/api/v1`
+   - `NEXT_PUBLIC_API_URL=https://api.example.com/api/v1`
 4. Deploy — Vercel handles build and CDN.
 
 ---
 
-## 3. Stripe webhook
+## 3. Payments (Stripe) and the webhook
 
-Point the Stripe webhook at `https://api.wrappedextended.com/api/v1/payments/webhook/`
+Payments are optional for a self-hoster. The four `STRIPE_*` variables must be
+*present* in the environment (Django reads them without a default) but may be empty.
+
+- **Payments off:** leave them empty. Checkout will fail for ordinary accounts, so
+  give accounts a free pass instead: superusers skip payment entirely
+  (`python manage.py createsuperuser`), and any user can be unlocked by ticking
+  `has_paid` on their profile in the Django admin (`/admin/`).
+- **Test mode:** use `sk_test_` / `pk_test_` keys and a test-mode price and webhook
+  secret from the Stripe dashboard (or `stripe listen --forward-to` for local work).
+- **Live:** use live keys, and register the webhook as below.
+
+The model is a single one-time payment that unlocks unlimited uploads for the user.
+
+Point the Stripe webhook at `https://api.example.com/api/v1/payments/webhook/`
 and subscribe to `checkout.session.completed`. Put the signing secret in
 `STRIPE_WEBHOOK_SECRET`. The handler is idempotent — a replayed event for an
 already-completed payment is a no-op.
@@ -124,9 +138,9 @@ Create the bucket yourself; nothing auto-creates it when `DEBUG=False`.
 
 - [ ] Dokploy compose app created against `docker-compose.dokploy.yml`
 - [ ] All environment variables set in the Dokploy Environment tab
-- [ ] Domain mapped: `api.wrappedextended.com` → `backend:8000`
+- [ ] Domain mapped: `api.example.com` → `backend:8000`
 - [ ] `SECURE_SSL_REDIRECT=False` for the tunnel topology
 - [ ] `celery-beat` running at exactly one replica
-- [ ] Stripe webhook registered and signing secret set
+- [ ] Stripe webhook registered and signing secret set (or payments left blank and users unlocked via admin)
 - [ ] Vercel deployed with `NEXT_PUBLIC_API_URL`
 - [ ] `GET /api/v1/health/` returns 200 through the domain

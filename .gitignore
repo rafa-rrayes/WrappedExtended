@@ -86,3 +86,5 @@ changelog.md
 
 # MinIO data
 minio_data/
+# Real env files
+.env.production
